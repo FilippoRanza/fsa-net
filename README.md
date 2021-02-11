@@ -1,5 +1,5 @@
 # fsa-net
-Algorithms and Data Structures class project
+Algorithms and Data Structures course project
 
 ## Description 
 
