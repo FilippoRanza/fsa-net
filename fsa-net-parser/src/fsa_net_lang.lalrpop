@@ -1,0 +1,137 @@
+
+use crate::syntax_tree;
+
+
+#[LALR]
+grammar;
+
+pub Fsacode : Vec<syntax_tree::Block<'input>> = {
+    <block_list: (Block)+> => {
+        block_list
+    }
+}
+
+Block: syntax_tree::Block<'input> = {
+    <Network> => syntax_tree::Block::Network(<>),
+    <Request> => syntax_tree::Block::Request(<>),
+}
+
+Network: syntax_tree::Network<'input> = {
+    "network" <Name> "{" <NetworkParamList>  "}" => syntax_tree::Network::new(<>)
+}
+
+NetworkParamList : Vec<syntax_tree::NetworkParameter<'input>> = {
+    <param_list: (NetworkParameter)+> => param_list
+}
+
+NetworkParameter : syntax_tree::NetworkParameter<'input> = {
+    <AutomataDecl> => syntax_tree::NetworkParameter::Automata(<>),
+    <LinkDecl> => syntax_tree::NetworkParameter::Link(<>),
+}
+
+AutomataDecl: syntax_tree::Automata<'input> = {
+    "automata" <Name> "{" <AutomataParameterList> "}" => syntax_tree::Automata::new(<>)
+}
+
+AutomataParameterList : Vec<syntax_tree::AutomataParameter<'input>> = {
+    <(AutomataParameter)+>
+}
+
+AutomataParameter : syntax_tree::AutomataParameter<'input> = {
+    <StateDecl> => syntax_tree::AutomataParameter::StateDecl(<>),
+    <TransitionDecl> => syntax_tree::AutomataParameter::Transition(<>)
+}
+
+StateDecl: syntax_tree::StateDeclaration<'input> = {
+    "state" <Name> => syntax_tree::StateDeclaration::State(<>),
+    "begin" <Name> => syntax_tree::StateDeclaration::Begin(<>)
+}
+
+TransitionDecl : syntax_tree::TransitionDeclaration<'input> = {
+    <SimpleTransitionDecl>,
+    <ComplexTransitionDecl>
+}
+
+SimpleTransitionDecl : syntax_tree::TransitionDeclaration<'input> = {
+    "trans" <Name> <Name> <Name> ";" => syntax_tree::TransitionDeclaration::simple_decl(<>)
+}
+
+ComplexTransitionDecl : syntax_tree::TransitionDeclaration<'input> = {
+    "trans" <name: Name> "{" <builder: ComplexTransitionBuilder> "}" => {
+        builder.build_transition(name).unwrap()
+    }
+}
+
+ComplexTransitionBuilder: syntax_tree::ComplexTransactionFactory<'input> = {
+    <list: TransitionParameterList> => {
+        list.into_iter().fold(syntax_tree::ComplexTransactionFactory::new(), |acc, curr| acc.set_parameter(curr).unwrap())
+    }
+}
+
+TransitionParameterList: Vec<syntax_tree::TransitionKeys<'input>> = {
+    <list: (TransitionParameter)+> => list
+}
+
+TransitionParameter: syntax_tree::TransitionKeys<'input> = {
+    "src" <Name> ";" => syntax_tree::TransitionKeys::Src(<>), 
+    "dst" <Name> ";" => syntax_tree::TransitionKeys::Dst(<>),
+    "input" <Event> ";" => syntax_tree::TransitionKeys::Input(<>),
+    "output" <EventList> ";" => syntax_tree::TransitionKeys::Output(<>),
+    "rel" <Name> ";" => syntax_tree::TransitionKeys::Rel(<>),
+    "obs" <Name> ";" => syntax_tree::TransitionKeys::Obs(<>)
+}
+
+EventList: Vec<syntax_tree::Event<'input>> = {
+    <list: (<Event> ",")*> <event: (Event)> => {
+        let mut list = list;
+        list.push(event);
+        list
+    }
+}
+
+Event: syntax_tree::Event<'input> = {
+    <Name>"(" <Name> ")" => syntax_tree::Event::new(<>)
+}
+
+LinkDecl: syntax_tree::Link<'input> = {
+    "link" <Name> <Name> <Name> => syntax_tree::Link::new(<>)
+}
+
+
+Request: syntax_tree::Request<'input> = {
+    "request"  "{" <RequestParamList>  "}" => syntax_tree::Request::new(<>)
+}
+
+RequestParamList: Vec<syntax_tree::Command<'input>> = {
+    <(<RequestParam> ";")+> 
+}
+
+
+RequestParam: syntax_tree::Command<'input> = {
+    "space" <Name> => syntax_tree::Command::Space(<>),
+    "linspace" <Name> <NameList> => syntax_tree::Command::Linspace(syntax_tree::LinspaceCommand::new(<>)),
+    "dignosis" <Name> <NameList> => syntax_tree::Command::Diagnosis(syntax_tree::DiagnosisCommand::new(<>))
+}
+
+
+
+NameList: Vec<&'input str> = {
+    <list: (<Name> ",")*> <name: (Name)> => {
+        let mut list = list;
+        list.push(name);
+        list
+    }
+}
+
+
+
+
+Name: &'input str = {
+    <SimpleName>,
+    <SingleQuoteName>,
+    <DoubleQuoteName>
+}
+
+SimpleName : &'input str = <r"[A-Za-z0-9]+">;
+SingleQuoteName:  &'input str = <name: r"'[^']+'"> => syntax_tree::remove_quotes(name);
+DoubleQuoteName:  &'input str = <name: r#""[^"]+""#> => syntax_tree::remove_quotes(name);
