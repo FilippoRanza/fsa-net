@@ -1,9 +1,13 @@
-
+use lalrpop_util::ParseError;
 use crate::syntax_tree;
 
 
 #[LALR]
 grammar;
+
+extern {
+    type Error = syntax_tree::TransitionFactoryError; 
+}
 
 pub Fsacode : Vec<syntax_tree::Block<'input>> = {
     <block_list: (Block)+> => {
@@ -57,14 +61,25 @@ SimpleTransitionDecl : syntax_tree::TransitionDeclaration<'input> = {
 }
 
 ComplexTransitionDecl : syntax_tree::TransitionDeclaration<'input> = {
-    "trans" <name: Name> "{" <builder: ComplexTransitionBuilder> "}" => {
-        builder.build_transition(name).unwrap()
+    "trans" <name: Name> "{" <builder: ComplexTransitionBuilder> "}" =>? {
+        match builder.build_transition(name) {
+            Ok(trans) => Ok(trans),
+            Err(error) => Err(ParseError::User {
+                error
+            })
+        }
     }
 }
 
 ComplexTransitionBuilder: syntax_tree::ComplexTransactionFactory<'input> = {
-    <list: TransitionParameterList> => {
-        list.into_iter().fold(syntax_tree::ComplexTransactionFactory::new(), |acc, curr| acc.set_parameter(curr).unwrap())
+    <list: TransitionParameterList> =>? {
+        let res = list.into_iter().try_fold(syntax_tree::ComplexTransactionFactory::new(), |acc, curr| acc.set_parameter(curr));
+        match res {
+            Ok(builder) => Ok(builder),
+            Err(error) => Err(ParseError::User {
+                error
+            })
+        }
     }
 }
 

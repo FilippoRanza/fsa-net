@@ -64,6 +64,12 @@ impl<'a> TransitionDeclaration<'a> {
     }
 }
 
+#[derive(Debug)]
+pub enum TransitionFactoryError {
+    MissingSourceOrDestination,
+    DuplicatedKey,
+}
+
 #[derive(Default)]
 pub struct TransitionParameterFactory<T> {
     param: Option<T>,
@@ -77,12 +83,12 @@ where
         Self::default()
     }
 
-    pub fn set_value(mut self, param: T) -> Option<Self> {
+    pub fn set_value(mut self, param: T) -> Result<Self, TransitionFactoryError> {
         if let Some(_) = self.param {
-            None
+            Err(TransitionFactoryError::DuplicatedKey)
         } else {
             self.param = Some(param);
-            Some(self)
+            Ok(self)
         }
     }
 
@@ -114,7 +120,10 @@ impl<'a> ComplexTransactionFactory<'a> {
         Self::default()
     }
 
-    pub fn build_transition(self, name: &'a str) -> Option<TransitionDeclaration<'a>> {
+    pub fn build_transition(
+        self,
+        name: &'a str,
+    ) -> Result<TransitionDeclaration<'a>, TransitionFactoryError> {
         if self.src.is_set() && self.dst.is_set() {
             let output = TransitionDeclaration {
                 name,
@@ -125,13 +134,16 @@ impl<'a> ComplexTransactionFactory<'a> {
                 rel_label: self.rel.get_param(),
                 obs_label: self.obs.get_param(),
             };
-            Some(output)
+            Ok(output)
         } else {
-            None
+            Err(TransitionFactoryError::MissingSourceOrDestination)
         }
     }
 
-    pub fn set_parameter(mut self, key: TransitionKeys<'a>) -> Option<Self> {
+    pub fn set_parameter(
+        mut self,
+        key: TransitionKeys<'a>,
+    ) -> Result<Self, TransitionFactoryError> {
         match key {
             TransitionKeys::Src(param) => self.src = self.src.set_value(param)?,
             TransitionKeys::Dst(param) => self.dst = self.dst.set_value(param)?,
@@ -140,7 +152,7 @@ impl<'a> ComplexTransactionFactory<'a> {
             TransitionKeys::Rel(param) => self.rel = self.rel.set_value(param)?,
             TransitionKeys::Obs(param) => self.obs = self.obs.set_value(param)?,
         }
-        Some(self)
+        Ok(self)
     }
 }
 
