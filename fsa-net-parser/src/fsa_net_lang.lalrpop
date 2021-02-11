@@ -43,8 +43,8 @@ AutomataParameter : syntax_tree::AutomataParameter<'input> = {
 }
 
 StateDecl: syntax_tree::StateDeclaration<'input> = {
-    "state" <Name> => syntax_tree::StateDeclaration::State(<>),
-    "begin" <Name> => syntax_tree::StateDeclaration::Begin(<>)
+    "state" <Name>  => syntax_tree::StateDeclaration::State(<>),
+    "begin" <Name>  => syntax_tree::StateDeclaration::Begin(<>)
 }
 
 TransitionDecl : syntax_tree::TransitionDeclaration<'input> = {
@@ -53,7 +53,7 @@ TransitionDecl : syntax_tree::TransitionDeclaration<'input> = {
 }
 
 SimpleTransitionDecl : syntax_tree::TransitionDeclaration<'input> = {
-    "trans" <Name> <Name> <Name> ";" => syntax_tree::TransitionDeclaration::simple_decl(<>)
+    "trans" <Name> <Name> <Name>  => syntax_tree::TransitionDeclaration::simple_decl(<>)
 }
 
 ComplexTransitionDecl : syntax_tree::TransitionDeclaration<'input> = {
@@ -73,12 +73,12 @@ TransitionParameterList: Vec<syntax_tree::TransitionKeys<'input>> = {
 }
 
 TransitionParameter: syntax_tree::TransitionKeys<'input> = {
-    "src" <Name> ";" => syntax_tree::TransitionKeys::Src(<>), 
-    "dst" <Name> ";" => syntax_tree::TransitionKeys::Dst(<>),
-    "input" <Event> ";" => syntax_tree::TransitionKeys::Input(<>),
-    "output" <EventList> ";" => syntax_tree::TransitionKeys::Output(<>),
-    "rel" <Name> ";" => syntax_tree::TransitionKeys::Rel(<>),
-    "obs" <Name> ";" => syntax_tree::TransitionKeys::Obs(<>)
+    "src" <Name>  => syntax_tree::TransitionKeys::Src(<>), 
+    "dst" <Name>  => syntax_tree::TransitionKeys::Dst(<>),
+    "input" <Event>  => syntax_tree::TransitionKeys::Input(<>),
+    "output" <EventList>  => syntax_tree::TransitionKeys::Output(<>),
+    "rel" <Name>  => syntax_tree::TransitionKeys::Rel(<>),
+    "obs" <Name>  => syntax_tree::TransitionKeys::Obs(<>)
 }
 
 EventList: Vec<syntax_tree::Event<'input>> = {
@@ -103,7 +103,7 @@ Request: syntax_tree::Request<'input> = {
 }
 
 RequestParamList: Vec<syntax_tree::Command<'input>> = {
-    <(<RequestParam> ";")+> 
+    <(<RequestParam> )+> 
 }
 
 

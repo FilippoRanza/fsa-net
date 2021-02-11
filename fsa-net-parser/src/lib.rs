@@ -28,7 +28,8 @@ mod tests {
         let code = load_file(file)?;
         let parser = fsa_net_lang::FsacodeParser::new();
         let result = parser.parse(&code);
-        Ok(result.is_ok())
+        result.unwrap();
+        Ok(true)
     }
 
 

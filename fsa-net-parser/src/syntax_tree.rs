@@ -140,7 +140,7 @@ impl<'a> ComplexTransactionFactory<'a> {
             TransitionKeys::Rel(param) => self.rel = self.rel.set_value(param)?,
             TransitionKeys::Obs(param) => self.obs = self.obs.set_value(param)?,
         }
-        None
+        Some(self)
     }
 }
 
