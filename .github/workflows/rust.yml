@@ -16,7 +16,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: Build parser
+      run: cargo build --verbose --package fsa-net-parser
+    - name: Run parser tests
+      run: cargo test --verbose --package fsa-net-parse
     - name: Build
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
+    
+
+
