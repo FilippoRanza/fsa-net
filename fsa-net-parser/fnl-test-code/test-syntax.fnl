@@ -1,5 +1,6 @@
-network Test {
+ network Test {
 
+    //this is a single line comment
     events ev, ev2
     obs olbl1,  olbls2
 
@@ -30,6 +31,10 @@ network Test {
     events a, b, c
 }
 
+//comment outside blocks
+/*
+    This is a multi line comment
+*/
 request Test {
     space 
 }
@@ -47,5 +52,7 @@ network "Weird Long Name" {
     link L2 'Test Name' A
 } 
 
-
+/***
+    multi line can contain a lot of * and /
+*/
 

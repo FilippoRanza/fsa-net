@@ -142,7 +142,7 @@ RequestParamList: Vec<syntax_tree::Command<'input>> = {
 RequestParam: syntax_tree::Command<'input> = {
     "space"  => syntax_tree::Command::Space,
     "linspace"  <NameList> => syntax_tree::Command::Linspace(syntax_tree::LinspaceCommand::new(<>)),
-    "dignosis"  <NameList> => syntax_tree::Command::Diagnosis(syntax_tree::DiagnosisCommand::new(<>))
+    "diagnosis"  <NameList> => syntax_tree::Command::Diagnosis(syntax_tree::DiagnosisCommand::new(<>))
 }
 
 
@@ -167,3 +167,46 @@ Name: &'input str = {
 SimpleName : &'input str = <r"[A-Za-z0-9]+">;
 SingleQuoteName:  &'input str = <name: r"'[^']+'"> => syntax_tree::remove_quotes(name);
 DoubleQuoteName:  &'input str = <name: r#""[^"]+""#> => syntax_tree::remove_quotes(name);
+
+
+
+match {
+    r#"\s+"# => {},
+    r#"/\*([^*]|\*[^/])*\*/"# => {},
+    r#"//[^\n]+"# => {},
+
+    r"\{" => "{",
+    r"\}" => "}",
+    r"\(" => "(",
+    r"\)" => ")",
+    r"," => ",",
+
+
+
+    r"network" => "network",
+    r"events" => "events",
+    r"automata" => "automata",
+    r"rel" => "rel",
+    r"obs" => "obs",
+    r"state" => "state",
+    r"begin" => "begin",
+    r"link" => "link",
+    r"request" => "request",
+    r"trans" => "trans",
+    r"space" => "space",
+    r"linspace" => "linspace",
+    r"src" => "src",
+    r"dst" => "dst",
+    r"input" => "input",
+    r"output" => "output",
+    r"diagnosis" => "diagnosis",
+
+
+
+} else {
+    r"[A-Za-z0-9]+",
+    r"'[^']+'",
+    r#""[^"]+""#
+}
+
+
