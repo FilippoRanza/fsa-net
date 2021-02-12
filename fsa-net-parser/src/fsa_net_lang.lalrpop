@@ -31,7 +31,24 @@ NetworkParamList : Vec<syntax_tree::NetworkParameter<'input>> = {
 NetworkParameter : syntax_tree::NetworkParameter<'input> = {
     <AutomataDecl> => syntax_tree::NetworkParameter::Automata(<>),
     <LinkDecl> => syntax_tree::NetworkParameter::Link(<>),
+    <EventNameList> => syntax_tree::NetworkParameter::Events(<>),
+    <ObserveLabelsList> => syntax_tree::NetworkParameter::ObserveLabels(<>),
+    <RelevanceLabelsList> => syntax_tree::NetworkParameter::RelevanceLabels(<>),  
 }
+
+EventNameList: Vec<&'input str> = {
+    "events" <NameList>
+}
+
+
+ObserveLabelsList: Vec<&'input str> = {
+    "obs" <NameList>
+}
+
+RelevanceLabelsList: Vec<&'input str> = {
+    "rel" <NameList>
+}
+
 
 AutomataDecl: syntax_tree::Automata<'input> = {
     "automata" <Name> "{" <AutomataParameterList> "}" => syntax_tree::Automata::new(<>)
@@ -114,7 +131,7 @@ LinkDecl: syntax_tree::Link<'input> = {
 
 
 Request: syntax_tree::Request<'input> = {
-    "request"  "{" <RequestParamList>  "}" => syntax_tree::Request::new(<>)
+    "request" <Name> "{" <RequestParamList>  "}" => syntax_tree::Request::new(<>)
 }
 
 RequestParamList: Vec<syntax_tree::Command<'input>> = {
@@ -123,9 +140,9 @@ RequestParamList: Vec<syntax_tree::Command<'input>> = {
 
 
 RequestParam: syntax_tree::Command<'input> = {
-    "space" <Name> => syntax_tree::Command::Space(<>),
-    "linspace" <Name> <NameList> => syntax_tree::Command::Linspace(syntax_tree::LinspaceCommand::new(<>)),
-    "dignosis" <Name> <NameList> => syntax_tree::Command::Diagnosis(syntax_tree::DiagnosisCommand::new(<>))
+    "space"  => syntax_tree::Command::Space,
+    "linspace"  <NameList> => syntax_tree::Command::Linspace(syntax_tree::LinspaceCommand::new(<>)),
+    "dignosis"  <NameList> => syntax_tree::Command::Diagnosis(syntax_tree::DiagnosisCommand::new(<>))
 }
 
 

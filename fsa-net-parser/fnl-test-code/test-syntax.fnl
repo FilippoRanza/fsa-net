@@ -1,4 +1,8 @@
 network Test {
+
+    events ev, ev2
+    obs olbl1,  olbls2
+
     automata A {
         begin s1
         state s2
@@ -17,14 +21,17 @@ network Test {
             src s1
             dst s2
             input ev(L1)
+            obs olbl1
         }
 
     }
     link L1 A B 
+    link L2 A B
+    events a, b, c
 }
 
-request {
-    space Test
+request Test {
+    space 
 }
 
 network "Weird Long Name" {

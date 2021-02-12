@@ -17,6 +17,9 @@ impl<'a> Network<'a> {
 pub enum NetworkParameter<'a> {
     Automata(Automata<'a>),
     Link(Link<'a>),
+    Events(Vec<&'a str>),
+    ObserveLabels(Vec<&'a str>),
+    RelevanceLabels(Vec<&'a str>),
 }
 
 pub struct Automata<'a> {
@@ -199,39 +202,38 @@ impl<'a> Link<'a> {
 }
 
 pub struct Request<'a> {
+    name: &'a str,
     list: Vec<Command<'a>>,
 }
 
 impl<'a> Request<'a> {
-    pub fn new(list: Vec<Command<'a>>) -> Self {
-        Self { list }
+    pub fn new(name: &'a str, list: Vec<Command<'a>>) -> Self {
+        Self { name, list }
     }
 }
 
 pub enum Command<'a> {
-    Space(&'a str),
+    Space,
     Linspace(LinspaceCommand<'a>),
     Diagnosis(DiagnosisCommand<'a>),
 }
 
 pub struct LinspaceCommand<'a> {
-    name: &'a str,
     name_list: Vec<&'a str>,
 }
 
 impl<'a> LinspaceCommand<'a> {
-    pub fn new(name: &'a str, name_list: Vec<&'a str>) -> Self {
-        Self { name, name_list }
+    pub fn new(name_list: Vec<&'a str>) -> Self {
+        Self { name_list }
     }
 }
 
 pub struct DiagnosisCommand<'a> {
-    name: &'a str,
     name_list: Vec<&'a str>,
 }
 
 impl<'a> DiagnosisCommand<'a> {
-    pub fn new(name: &'a str, name_list: Vec<&'a str>) -> Self {
-        Self { name, name_list }
+    pub fn new(name_list: Vec<&'a str>) -> Self {
+        Self { name_list }
     }
 }
