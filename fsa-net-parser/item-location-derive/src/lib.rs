@@ -134,9 +134,6 @@ fn is_automatic_field(ident: &syn::Ident) -> bool {
     name.starts_with("__") && name.ends_with("__")
 }
 
-fn make_automatic_name_field(name: &str) -> syn::Ident {
-    syn::Ident::from(format!("__{}__", name))
-}
 
 
 enum FieldType<'a> {
