@@ -10,6 +10,7 @@ build = "build.rs"
 [dependencies]
 lalrpop-util = "0.19"
 regex = "1"
+item-location-derive = {path = "item-location-derive"}
 
 [build-dependencies]
 lalrpop = "0.19"

@@ -1,18 +1,18 @@
+use item_location_derive::{add_location, DefaultBuilder};
+
 pub enum Block<'a> {
     Network(Network<'a>),
     Request(Request<'a>),
 }
 
+#[add_location]
+#[derive(DefaultBuilder)]
 pub struct Network<'a> {
     name: &'a str,
     params: Vec<NetworkParameter<'a>>,
 }
 
-impl<'a> Network<'a> {
-    pub fn new(name: &'a str, params: Vec<NetworkParameter<'a>>) -> Self {
-        Self { name, params }
-    }
-}
+
 
 pub enum NetworkParameter<'a> {
     Automata(Automata<'a>),
@@ -22,16 +22,13 @@ pub enum NetworkParameter<'a> {
     RelevanceLabels(Vec<&'a str>),
 }
 
+#[add_location]
+#[derive(DefaultBuilder)]
 pub struct Automata<'a> {
     name: &'a str,
     params: Vec<AutomataParameter<'a>>,
 }
 
-impl<'a> Automata<'a> {
-    pub fn new(name: &'a str, params: Vec<AutomataParameter<'a>>) -> Self {
-        Self { name, params }
-    }
-}
 
 pub enum AutomataParameter<'a> {
     StateDecl(StateDeclaration<'a>),
