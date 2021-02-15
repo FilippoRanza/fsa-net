@@ -12,8 +12,6 @@ pub struct Network<'a> {
     params: Vec<NetworkParameter<'a>>,
 }
 
-
-
 pub enum NetworkParameter<'a> {
     Automata(Automata<'a>),
     Link(Link<'a>),
@@ -28,7 +26,6 @@ pub struct Automata<'a> {
     name: &'a str,
     params: Vec<AutomataParameter<'a>>,
 }
-
 
 pub enum AutomataParameter<'a> {
     StateDecl(StateDeclaration<'a>),

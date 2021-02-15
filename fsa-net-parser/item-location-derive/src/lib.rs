@@ -74,19 +74,20 @@ fn impl_default_builder(ast: &syn::DeriveInput) -> TokenStream {
             }
         }
     };
-   
+
     gen.into()
 }
 
-
-fn default_builder_parameters<'a>(ast: &'a syn::DeriveInput) -> impl Iterator<Item=proc_macro2::TokenStream> + 'a {
+fn default_builder_parameters<'a>(
+    ast: &'a syn::DeriveInput,
+) -> impl Iterator<Item = proc_macro2::TokenStream> + 'a {
     match &ast.data {
         syn::Data::Struct(struct_data) => struct_data
             .fields
             .iter()
             .filter_map(|field| {
                 if let Some(name) = &field.ident {
-                    if ! is_automatic_field(name) {
+                    if !is_automatic_field(name) {
                         Some((name, &field.ty))
                     } else {
                         None
@@ -102,7 +103,9 @@ fn default_builder_parameters<'a>(ast: &'a syn::DeriveInput) -> impl Iterator<It
     }
 }
 
-fn default_builder_fields<'a>(ast: &'a syn::DeriveInput) -> impl Iterator<Item=proc_macro2::TokenStream> + 'a {
+fn default_builder_fields<'a>(
+    ast: &'a syn::DeriveInput,
+) -> impl Iterator<Item = proc_macro2::TokenStream> + 'a {
     match &ast.data {
         syn::Data::Struct(struct_data) => struct_data
             .fields
@@ -133,8 +136,6 @@ fn is_automatic_field(ident: &syn::Ident) -> bool {
     let name = ident.to_string();
     name.starts_with("__") && name.ends_with("__")
 }
-
-
 
 enum FieldType<'a> {
     User(&'a syn::Ident),
