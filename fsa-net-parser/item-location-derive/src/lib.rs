@@ -8,33 +8,37 @@ use syn::parse_macro_input;
 
 #[proc_macro_attribute]
 pub fn add_location(_: TokenStream, input: TokenStream) -> TokenStream {
-    let mut ast: syn::DeriveInput = parse_macro_input!(input);
-    match &mut ast.data {
-        syn::Data::Struct(ref mut data) => match &mut data.fields {
-            syn::Fields::Named(fields) => {
-                fields.named.push(
-                    syn::Field::parse_named
-                        .parse2(quote::quote! {
-                            __begin__ : usize
-                        })
-                        .unwrap(),
-                );
-                fields.named.push(
-                    syn::Field::parse_named
-                        .parse2(quote::quote! {
-                            __end__: usize
-                        })
-                        .unwrap(),
-                );
-            }
-            _ => {}
-        },
-        _ => {
-            panic!("Only struct can derive `add_attribute`");
+    let ast = parse_macro_input!(input);
+    let ast = add_location_fields(ast);
+    add_location_funcitions(ast)
+}
+
+fn add_location_fields(mut ast: syn::DeriveInput) -> syn::DeriveInput {
+    if let syn::Data::Struct(data) = &mut ast.data {
+        if let syn::Fields::Named(fields) = &mut data.fields {
+            fields.named.push(
+                syn::Field::parse_named
+                    .parse2(quote::quote! {
+                        __begin__ : usize
+                    })
+                    .unwrap(),
+            );
+            fields.named.push(
+                syn::Field::parse_named
+                    .parse2(quote::quote! {
+                        __end__: usize
+                    })
+                    .unwrap(),
+            );
         }
     }
+    ast
+}
+
+fn add_location_funcitions(ast: syn::DeriveInput) -> TokenStream {
     let name = &ast.ident;
     let generics = &ast.generics;
+
     let gen = quote::quote! {
         #ast
         impl#generics #name#generics {
