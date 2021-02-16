@@ -55,20 +55,19 @@ impl<'a> TransitionDeclaration<'a> {
     }
 }
 
-
 #[derive(Debug)]
 pub struct TransitionFactoryError {
     begin: usize,
     end: usize,
-    error_type: TransitionFactoryErrorType
+    error_type: TransitionFactoryErrorType,
 }
 
 impl TransitionFactoryError {
     fn new_duplicated_key(begin: usize, end: usize) -> Self {
         Self {
             begin,
-            end, 
-            error_type: TransitionFactoryErrorType::DuplicatedKey
+            end,
+            error_type: TransitionFactoryErrorType::DuplicatedKey,
         }
     }
 
@@ -76,12 +75,10 @@ impl TransitionFactoryError {
         Self {
             begin,
             end,
-            error_type: TransitionFactoryErrorType::MissingSourceOrDestination
+            error_type: TransitionFactoryErrorType::MissingSourceOrDestination,
         }
     }
-
 }
-
 
 #[derive(Debug)]
 pub enum TransitionFactoryErrorType {
@@ -99,8 +96,11 @@ impl<T> TransitionParameterFactory<T>
 where
     T: Default,
 {
-
-    pub fn set_value(mut self, param: T, loc: (usize, usize)) -> Result<Self, TransitionFactoryError> {
+    pub fn set_value(
+        mut self,
+        param: T,
+        loc: (usize, usize),
+    ) -> Result<Self, TransitionFactoryError> {
         if let Some(_) = self.param {
             let (begin, end) = loc;
             Err(TransitionFactoryError::new_duplicated_key(begin, end))
@@ -123,7 +123,6 @@ where
     }
 }
 
-
 #[derive(Default)]
 pub struct ComplexTransactionFactory<'a> {
     src: TransitionParameterFactory<&'a str>,
@@ -133,7 +132,7 @@ pub struct ComplexTransactionFactory<'a> {
     rel: TransitionParameterFactory<&'a str>,
     obs: TransitionParameterFactory<&'a str>,
     begin: usize,
-    end: usize
+    end: usize,
 }
 
 impl<'a> ComplexTransactionFactory<'a> {
@@ -163,14 +162,13 @@ impl<'a> ComplexTransactionFactory<'a> {
             );
             Ok(output)
         } else {
-            Err(TransitionFactoryError::new_missing_src_dst(self.begin, self.end))
+            Err(TransitionFactoryError::new_missing_src_dst(
+                self.begin, self.end,
+            ))
         }
     }
 
-    pub fn set_parameter(
-        mut self,
-        key: TransitionKey<'a>,
-    ) -> Result<Self, TransitionFactoryError> {
+    pub fn set_parameter(mut self, key: TransitionKey<'a>) -> Result<Self, TransitionFactoryError> {
         let loc = key.get_location();
         match key.key {
             TransitionKeys::Src(param) => self.src = self.src.set_value(param, loc)?,
@@ -187,7 +185,7 @@ impl<'a> ComplexTransactionFactory<'a> {
 #[add_location]
 #[derive(DefaultBuilder)]
 pub struct TransitionKey<'a> {
-    key: TransitionKeys<'a>
+    key: TransitionKeys<'a>,
 }
 
 pub enum TransitionKeys<'a> {
@@ -205,13 +203,11 @@ pub fn remove_quotes<'a>(quoted_str: &'a str) -> &'a str {
 }
 
 #[add_location]
-#[derive(DefaultBuilder)]
-#[derive(Default)]
+#[derive(DefaultBuilder, Default)]
 pub struct Event<'a> {
     name: &'a str,
     link: &'a str,
 }
-
 
 #[add_location]
 #[derive(DefaultBuilder)]
@@ -228,13 +224,11 @@ pub struct Request<'a> {
     list: Vec<Command<'a>>,
 }
 
-
 pub enum Command<'a> {
     Space,
     Linspace(LinspaceCommand<'a>),
     Diagnosis(DiagnosisCommand<'a>),
 }
-
 
 #[add_location]
 #[derive(DefaultBuilder)]
