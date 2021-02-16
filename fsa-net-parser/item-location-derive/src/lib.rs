@@ -42,10 +42,10 @@ fn add_location_funcitions(ast: syn::DeriveInput) -> TokenStream {
     let gen = quote::quote! {
         #ast
         impl#generics #name#generics {
-            fn get_location(&self) -> (usize, usize) {
+            pub fn get_location(&self) -> (usize, usize) {
                 (self.__begin__, self.__end__)
             }
-            fn set_location(mut self, begin: usize, end: usize) -> Self {
+            pub fn set_location(mut self, begin: usize, end: usize) -> Self {
                 self.__begin__ = begin;
                 self.__end__ = end;
                 self

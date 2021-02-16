@@ -21,7 +21,7 @@ Block: syntax_tree::Block<'input> = {
 }
 
 Network: syntax_tree::Network<'input> = {
-    "network" <Name> "{" <NetworkParamList>  "}" => syntax_tree::Network::new(<>)
+    <begin: @L> "network" <name: Name> "{" <params: NetworkParamList>  "}" <end: @R> => syntax_tree::Network::new(name, params).set_location(begin, end)
 }
 
 NetworkParamList : Vec<syntax_tree::NetworkParameter<'input>> = {
@@ -51,7 +51,7 @@ RelevanceLabelsList: Vec<&'input str> = {
 
 
 AutomataDecl: syntax_tree::Automata<'input> = {
-    "automata" <Name> "{" <AutomataParameterList> "}" => syntax_tree::Automata::new(<>)
+    <begin: @L> "automata" <name: Name> "{" <params: AutomataParameterList> "}" <end: @R>  => syntax_tree::Automata::new(name, params).set_location(begin, end)
 }
 
 AutomataParameterList : Vec<syntax_tree::AutomataParameter<'input>> = {

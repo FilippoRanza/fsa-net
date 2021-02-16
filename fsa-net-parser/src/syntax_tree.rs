@@ -37,6 +37,8 @@ pub enum StateDeclaration<'a> {
     Begin(&'a str),
 }
 
+#[add_location]
+#[derive(DefaultBuilder)]
 pub struct TransitionDeclaration<'a> {
     name: &'a str,
     source: &'a str,
@@ -49,24 +51,45 @@ pub struct TransitionDeclaration<'a> {
 
 impl<'a> TransitionDeclaration<'a> {
     pub fn simple_decl(name: &'a str, source: &'a str, destination: &'a str) -> Self {
-        Self {
-            name,
-            source,
-            destination,
-            input: None,
-            output: None,
-            rel_label: None,
-            obs_label: None,
-        }
+        Self::new(name, source, destination, None, None, None, None)
     }
 }
 
+
 #[derive(Debug)]
-pub enum TransitionFactoryError {
+pub struct TransitionFactoryError {
+    begin: usize,
+    end: usize,
+    error_type: TransitionFactoryErrorType
+}
+
+impl TransitionFactoryError {
+    fn new_duplicated_key(begin: usize, end: usize) -> Self {
+        Self {
+            begin,
+            end, 
+            error_type: TransitionFactoryErrorType::DuplicatedKey
+        }
+    }
+
+    fn new_missing_src_dst(begin: usize, end: usize) -> Self {
+        Self {
+            begin,
+            end,
+            error_type: TransitionFactoryErrorType::MissingSourceOrDestination
+        }
+    }
+
+}
+
+
+#[derive(Debug)]
+pub enum TransitionFactoryErrorType {
     MissingSourceOrDestination,
     DuplicatedKey,
 }
 
+#[add_location]
 #[derive(Default)]
 pub struct TransitionParameterFactory<T> {
     param: Option<T>,
@@ -76,13 +99,11 @@ impl<T> TransitionParameterFactory<T>
 where
     T: Default,
 {
-    pub fn new() -> Self {
-        Self::default()
-    }
 
     pub fn set_value(mut self, param: T) -> Result<Self, TransitionFactoryError> {
         if let Some(_) = self.param {
-            Err(TransitionFactoryError::DuplicatedKey)
+            let (begin, end) = self.get_location();
+            Err(TransitionFactoryError::new_duplicated_key(begin, end))
         } else {
             self.param = Some(param);
             Ok(self)
@@ -102,6 +123,7 @@ where
     }
 }
 
+
 #[derive(Default)]
 pub struct ComplexTransactionFactory<'a> {
     src: TransitionParameterFactory<&'a str>,
@@ -110,6 +132,8 @@ pub struct ComplexTransactionFactory<'a> {
     output: TransitionParameterFactory<Vec<Event<'a>>>,
     rel: TransitionParameterFactory<&'a str>,
     obs: TransitionParameterFactory<&'a str>,
+    begin: usize,
+    end: usize
 }
 
 impl<'a> ComplexTransactionFactory<'a> {
@@ -117,23 +141,29 @@ impl<'a> ComplexTransactionFactory<'a> {
         Self::default()
     }
 
+    pub fn set_location(mut self, begin: usize, end: usize) -> Self {
+        self.begin = begin;
+        self.end = end;
+        self
+    }
+
     pub fn build_transition(
         self,
         name: &'a str,
     ) -> Result<TransitionDeclaration<'a>, TransitionFactoryError> {
         if self.src.is_set() && self.dst.is_set() {
-            let output = TransitionDeclaration {
+            let output = TransitionDeclaration::new(
                 name,
-                source: self.src.unwrap(),
-                destination: self.dst.unwrap(),
-                input: self.input.get_param(),
-                output: self.output.get_param(),
-                rel_label: self.rel.get_param(),
-                obs_label: self.obs.get_param(),
-            };
+                self.src.unwrap(),
+                self.dst.unwrap(),
+                self.input.get_param(),
+                self.output.get_param(),
+                self.rel.get_param(),
+                self.obs.get_param(),
+            );
             Ok(output)
         } else {
-            Err(TransitionFactoryError::MissingSourceOrDestination)
+            Err(TransitionFactoryError::new_missing_src_dst(self.begin, self.end))
         }
     }
 
@@ -167,44 +197,30 @@ pub fn remove_quotes<'a>(quoted_str: &'a str) -> &'a str {
     &quoted_str[1..end]
 }
 
+#[add_location]
+#[derive(DefaultBuilder)]
 #[derive(Default)]
 pub struct Event<'a> {
     name: &'a str,
     link: &'a str,
 }
 
-impl<'a> Event<'a> {
-    pub fn new(name: &'a str, link: &'a str) -> Self {
-        Self { name, link }
-    }
-}
 
+#[add_location]
+#[derive(DefaultBuilder)]
 pub struct Link<'a> {
     name: &'a str,
     source: &'a str,
     destination: &'a str,
 }
 
-impl<'a> Link<'a> {
-    pub fn new(name: &'a str, source: &'a str, destination: &'a str) -> Self {
-        Self {
-            name,
-            source,
-            destination,
-        }
-    }
-}
-
+#[add_location]
+#[derive(DefaultBuilder)]
 pub struct Request<'a> {
     name: &'a str,
     list: Vec<Command<'a>>,
 }
 
-impl<'a> Request<'a> {
-    pub fn new(name: &'a str, list: Vec<Command<'a>>) -> Self {
-        Self { name, list }
-    }
-}
 
 pub enum Command<'a> {
     Space,
@@ -212,22 +228,15 @@ pub enum Command<'a> {
     Diagnosis(DiagnosisCommand<'a>),
 }
 
+
+#[add_location]
+#[derive(DefaultBuilder)]
 pub struct LinspaceCommand<'a> {
     name_list: Vec<&'a str>,
 }
 
-impl<'a> LinspaceCommand<'a> {
-    pub fn new(name_list: Vec<&'a str>) -> Self {
-        Self { name_list }
-    }
-}
-
+#[add_location]
+#[derive(DefaultBuilder)]
 pub struct DiagnosisCommand<'a> {
     name_list: Vec<&'a str>,
-}
-
-impl<'a> DiagnosisCommand<'a> {
-    pub fn new(name_list: Vec<&'a str>) -> Self {
-        Self { name_list }
-    }
 }
