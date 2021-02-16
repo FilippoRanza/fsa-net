@@ -100,9 +100,9 @@ where
     T: Default,
 {
 
-    pub fn set_value(mut self, param: T) -> Result<Self, TransitionFactoryError> {
+    pub fn set_value(mut self, param: T, loc: (usize, usize)) -> Result<Self, TransitionFactoryError> {
         if let Some(_) = self.param {
-            let (begin, end) = self.get_location();
+            let (begin, end) = loc;
             Err(TransitionFactoryError::new_duplicated_key(begin, end))
         } else {
             self.param = Some(param);
@@ -169,18 +169,25 @@ impl<'a> ComplexTransactionFactory<'a> {
 
     pub fn set_parameter(
         mut self,
-        key: TransitionKeys<'a>,
+        key: TransitionKey<'a>,
     ) -> Result<Self, TransitionFactoryError> {
-        match key {
-            TransitionKeys::Src(param) => self.src = self.src.set_value(param)?,
-            TransitionKeys::Dst(param) => self.dst = self.dst.set_value(param)?,
-            TransitionKeys::Input(param) => self.input = self.input.set_value(param)?,
-            TransitionKeys::Output(param) => self.output = self.output.set_value(param)?,
-            TransitionKeys::Rel(param) => self.rel = self.rel.set_value(param)?,
-            TransitionKeys::Obs(param) => self.obs = self.obs.set_value(param)?,
+        let loc = key.get_location();
+        match key.key {
+            TransitionKeys::Src(param) => self.src = self.src.set_value(param, loc)?,
+            TransitionKeys::Dst(param) => self.dst = self.dst.set_value(param, loc)?,
+            TransitionKeys::Input(param) => self.input = self.input.set_value(param, loc)?,
+            TransitionKeys::Output(param) => self.output = self.output.set_value(param, loc)?,
+            TransitionKeys::Rel(param) => self.rel = self.rel.set_value(param, loc)?,
+            TransitionKeys::Obs(param) => self.obs = self.obs.set_value(param, loc)?,
         }
         Ok(self)
     }
+}
+
+#[add_location]
+#[derive(DefaultBuilder)]
+pub struct TransitionKey<'a> {
+    key: TransitionKeys<'a>
 }
 
 pub enum TransitionKeys<'a> {

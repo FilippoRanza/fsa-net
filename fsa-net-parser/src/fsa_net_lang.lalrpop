@@ -69,8 +69,12 @@ StateDecl: syntax_tree::StateDeclaration<'input> = {
 }
 
 TransitionDecl : syntax_tree::TransitionDeclaration<'input> = {
-    <SimpleTransitionDecl>,
-    <ComplexTransitionDecl>
+    <begin: @L> <trans: SimpleTransitionDecl> <end: @R>  => {
+        trans.set_location(begin, end)
+    },
+    <begin: @L> <trans: ComplexTransitionDecl> <end: @R> => {
+        trans.set_location(begin, end)
+    }
 }
 
 SimpleTransitionDecl : syntax_tree::TransitionDeclaration<'input> = {
@@ -78,7 +82,8 @@ SimpleTransitionDecl : syntax_tree::TransitionDeclaration<'input> = {
 }
 
 ComplexTransitionDecl : syntax_tree::TransitionDeclaration<'input> = {
-    "trans" <name: Name> "{" <builder: ComplexTransitionBuilder> "}" =>? {
+    <begin: @L> "trans" <name: Name> "{" <builder: ComplexTransitionBuilder> "}" <end: @R> =>? {
+        let builder = builder.set_location(begin, end);
         match builder.build_transition(name) {
             Ok(trans) => Ok(trans),
             Err(error) => Err(ParseError::User {
@@ -100,17 +105,17 @@ ComplexTransitionBuilder: syntax_tree::ComplexTransactionFactory<'input> = {
     }
 }
 
-TransitionParameterList: Vec<syntax_tree::TransitionKeys<'input>> = {
+TransitionParameterList: Vec<syntax_tree::TransitionKey<'input>> = {
     <list: (TransitionParameter)+> => list
 }
 
-TransitionParameter: syntax_tree::TransitionKeys<'input> = {
-    "src" <Name>  => syntax_tree::TransitionKeys::Src(<>), 
-    "dst" <Name>  => syntax_tree::TransitionKeys::Dst(<>),
-    "input" <Event>  => syntax_tree::TransitionKeys::Input(<>),
-    "output" <EventList>  => syntax_tree::TransitionKeys::Output(<>),
-    "rel" <Name>  => syntax_tree::TransitionKeys::Rel(<>),
-    "obs" <Name>  => syntax_tree::TransitionKeys::Obs(<>)
+TransitionParameter: syntax_tree::TransitionKey<'input> = {
+    <begin: @L> "src" <name: Name> <end: @R> => syntax_tree::TransitionKey::new(syntax_tree::TransitionKeys::Src(name) ).set_location(begin, end),
+    <begin: @L> "dst" <name: Name> <end: @R> => syntax_tree::TransitionKey::new(syntax_tree::TransitionKeys::Dst(name)).set_location(begin, end),
+    <begin: @L> "input" <event: Event> <end: @R> => syntax_tree::TransitionKey::new(syntax_tree::TransitionKeys::Input(event)).set_location(begin, end),
+    <begin: @L> "output" <list: EventList> <end: @R> => syntax_tree::TransitionKey::new(syntax_tree::TransitionKeys::Output(list)).set_location(begin, end),
+    <begin: @L> "rel" <name: Name> <end: @R> => syntax_tree::TransitionKey::new(syntax_tree::TransitionKeys::Rel(name)).set_location(begin, end),
+    <begin: @L> "obs" <name: Name> <end: @R> => syntax_tree::TransitionKey::new(syntax_tree::TransitionKeys::Obs(name)).set_location(begin, end)
 }
 
 EventList: Vec<syntax_tree::Event<'input>> = {
@@ -122,16 +127,16 @@ EventList: Vec<syntax_tree::Event<'input>> = {
 }
 
 Event: syntax_tree::Event<'input> = {
-    <Name>"(" <Name> ")" => syntax_tree::Event::new(<>)
+    <begin: @L> <event: Name>"(" <link: Name> ")" <end: @R> => syntax_tree::Event::new(event, link).set_location(begin, end)
 }
 
 LinkDecl: syntax_tree::Link<'input> = {
-    "link" <Name> <Name> <Name> => syntax_tree::Link::new(<>)
+    <begin: @L> "link" <name: Name> <src: Name> <dst: Name> <end: @R>  => syntax_tree::Link::new(name, src, dst).set_location(begin, end)
 }
 
 
 Request: syntax_tree::Request<'input> = {
-    "request" <Name> "{" <RequestParamList>  "}" => syntax_tree::Request::new(<>)
+    <begin: @L> "request" <name: Name> "{" <list: RequestParamList>  "}" <end: @R> => syntax_tree::Request::new(name, list).set_location(begin, end)
 }
 
 RequestParamList: Vec<syntax_tree::Command<'input>> = {
@@ -141,8 +146,8 @@ RequestParamList: Vec<syntax_tree::Command<'input>> = {
 
 RequestParam: syntax_tree::Command<'input> = {
     "space"  => syntax_tree::Command::Space,
-    "linspace"  <NameList> => syntax_tree::Command::Linspace(syntax_tree::LinspaceCommand::new(<>)),
-    "diagnosis"  <NameList> => syntax_tree::Command::Diagnosis(syntax_tree::DiagnosisCommand::new(<>))
+    <begin: @L> "linspace"  <list: NameList> <end: @R> => syntax_tree::Command::Linspace(syntax_tree::LinspaceCommand::new(list).set_location(begin, end)),
+    <begin: @L> "diagnosis"  <list: NameList> <end: @R> => syntax_tree::Command::Diagnosis(syntax_tree::DiagnosisCommand::new(list).set_location(begin, end))
 }
 
 
