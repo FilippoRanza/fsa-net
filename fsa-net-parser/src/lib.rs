@@ -4,6 +4,17 @@ lalrpop_mod!(fsa_net_lang);
 
 mod syntax_tree;
 
+type Code<'a> = Vec<syntax_tree::Block<'a>>;
+type SyntaxError<'a> = lalrpop_util::ParseError<usize, lalrpop_util::lexer::Token<'a>, syntax_tree::TransitionFactoryError>;
+
+pub fn parse<'a>(code: &'a str) -> Result<Code<'a>, SyntaxError<'a>>{
+
+    let parser = fsa_net_lang::FsacodeParser::new();
+    parser.parse(code)
+}
+
+
+
 #[cfg(test)]
 mod tests {
 
