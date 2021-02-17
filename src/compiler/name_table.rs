@@ -26,7 +26,7 @@ impl NameTableInfo {
 }
 
 #[derive(Debug)]
-struct RidefinitionError<'a> {
+pub struct RidefinitionError<'a> {
     name: &'a str,
     orig_loc: Location,
     ridef_loc: Location,

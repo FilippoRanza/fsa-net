@@ -2,10 +2,12 @@
 extern crate lalrpop_util;
 lalrpop_mod!(fsa_net_lang);
 
-mod syntax_tree;
+pub mod syntax_tree;
 
-type Code<'a> = Vec<syntax_tree::Block<'a>>;
-type SyntaxError<'a> = lalrpop_util::ParseError<usize, lalrpop_util::lexer::Token<'a>, syntax_tree::TransitionFactoryError>;
+
+
+pub type Code<'a> = Vec<syntax_tree::Block<'a>>;
+pub type SyntaxError<'a> = lalrpop_util::ParseError<usize, lalrpop_util::lexer::Token<'a>, syntax_tree::TransitionFactoryError>;
 
 pub fn parse<'a>(code: &'a str) -> Result<Code<'a>, SyntaxError<'a>>{
 

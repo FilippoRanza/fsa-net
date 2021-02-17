@@ -8,8 +8,8 @@ pub enum Block<'a> {
 #[add_location]
 #[derive(DefaultBuilder)]
 pub struct Network<'a> {
-    name: &'a str,
-    params: Vec<NetworkParameter<'a>>,
+    pub name: &'a str,
+    pub params: Vec<NetworkParameter<'a>>,
 }
 
 pub enum NetworkParameter<'a> {

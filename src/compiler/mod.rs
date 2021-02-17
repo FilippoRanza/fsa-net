@@ -14,3 +14,4 @@ impl Location {
 }
 
 mod name_table;
+mod name_table_factory;
