@@ -1,19 +1,14 @@
-
-use structopt::StructOpt;
-use std::path;
 use fsa_net_parser;
-
+use std::path;
+use structopt::StructOpt;
 
 mod compiler;
 mod input_output;
 
 #[derive(StructOpt)]
 struct Arguments {
-    file: Option<path::PathBuf>
+    file: Option<path::PathBuf>,
 }
-
-
-
 
 fn main() {
     let args = Arguments::from_args();
