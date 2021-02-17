@@ -11,6 +11,7 @@ enum NameClass {
     RelLabel,
     State,
     Transition,
+    Request,
 }
 
 struct NameTableInfo {
@@ -51,7 +52,9 @@ impl<'a> RidefinitionError<'a> {
     }
 }
 
-struct NameTable<'a> {
+pub type InsertResult<'a> = Result<(), RidefinitionError<'a>>;
+
+pub struct NameTable<'a> {
     names: HashMap<&'a str, NameTableInfo>,
 }
 
@@ -62,68 +65,40 @@ impl<'a> NameTable<'a> {
         }
     }
 
-    pub fn insert_automata(
-        &mut self,
-        name: &'a str,
-        loc: (usize, usize),
-    ) -> Result<(), RidefinitionError<'a>> {
+    pub fn insert_automata(&mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
         self.insert_name(name, NameClass::Automata, loc)
     }
 
-    pub fn insert_network(
-        &mut self,
-        name: &'a str,
-        loc: (usize, usize),
-    ) -> Result<(), RidefinitionError<'a>> {
+    pub fn insert_network(&mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
         self.insert_name(name, NameClass::Network, loc)
     }
 
-    pub fn insert_link(
-        &mut self,
-        name: &'a str,
-        loc: (usize, usize),
-    ) -> Result<(), RidefinitionError<'a>> {
+    pub fn insert_link(&mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
         self.insert_name(name, NameClass::Link, loc)
     }
 
-    pub fn insert_event(
-        &mut self,
-        name: &'a str,
-        loc: (usize, usize),
-    ) -> Result<(), RidefinitionError<'a>> {
+    pub fn insert_event(&mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
         self.insert_name(name, NameClass::Event, loc)
     }
 
-    pub fn insert_obs_label(
-        &mut self,
-        name: &'a str,
-        loc: (usize, usize),
-    ) -> Result<(), RidefinitionError<'a>> {
+    pub fn insert_obs_label(&mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
         self.insert_name(name, NameClass::ObsLabel, loc)
     }
 
-    pub fn insert_rel_label(
-        &mut self,
-        name: &'a str,
-        loc: (usize, usize),
-    ) -> Result<(), RidefinitionError<'a>> {
+    pub fn insert_rel_label(&mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
         self.insert_name(name, NameClass::RelLabel, loc)
     }
 
-    pub fn insert_state(
-        &mut self,
-        name: &'a str,
-        loc: (usize, usize),
-    ) -> Result<(), RidefinitionError<'a>> {
+    pub fn insert_state(&mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
         self.insert_name(name, NameClass::State, loc)
     }
 
-    pub fn insert_transition(
-        &mut self,
-        name: &'a str,
-        loc: (usize, usize),
-    ) -> Result<(), RidefinitionError<'a>> {
+    pub fn insert_transition(&mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
         self.insert_name(name, NameClass::Transition, loc)
+    }
+
+    pub fn insert_request(&mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
+        self.insert_name(name, NameClass::Request, loc)
     }
 
     fn insert_name(
@@ -131,7 +106,7 @@ impl<'a> NameTable<'a> {
         name: &'a str,
         class: NameClass,
         loc: (usize, usize),
-    ) -> Result<(), RidefinitionError<'a>> {
+    ) -> InsertResult<'a> {
         if let Some(prev_def) = self.names.get(name) {
             let err = self.make_error(prev_def, name, class, loc);
             Err(err)
