@@ -23,8 +23,8 @@ pub enum NetworkParameter<'a> {
 #[add_location]
 #[derive(DefaultBuilder)]
 pub struct Automata<'a> {
-    name: &'a str,
-    params: Vec<AutomataParameter<'a>>,
+    pub name: &'a str,
+    pub params: Vec<AutomataParameter<'a>>,
 }
 
 pub enum AutomataParameter<'a> {
@@ -40,13 +40,13 @@ pub enum StateDeclaration<'a> {
 #[add_location]
 #[derive(DefaultBuilder)]
 pub struct TransitionDeclaration<'a> {
-    name: &'a str,
-    source: &'a str,
-    destination: &'a str,
-    input: Option<Event<'a>>,
-    output: Option<Vec<Event<'a>>>,
-    rel_label: Option<&'a str>,
-    obs_label: Option<&'a str>,
+    pub name: &'a str,
+    pub source: &'a str,
+    pub destination: &'a str,
+    pub input: Option<Event<'a>>,
+    pub output: Option<Vec<Event<'a>>>,
+    pub rel_label: Option<&'a str>,
+    pub obs_label: Option<&'a str>,
 }
 
 impl<'a> TransitionDeclaration<'a> {
@@ -212,9 +212,9 @@ pub struct Event<'a> {
 #[add_location]
 #[derive(DefaultBuilder)]
 pub struct Link<'a> {
-    name: &'a str,
-    source: &'a str,
-    destination: &'a str,
+    pub name: &'a str,
+    pub source: &'a str,
+    pub destination: &'a str,
 }
 
 #[add_location]

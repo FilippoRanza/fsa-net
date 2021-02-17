@@ -52,7 +52,7 @@ impl<'a> RidefinitionError<'a> {
     }
 }
 
-pub type InsertResult<'a> = Result<(), RidefinitionError<'a>>;
+pub type InsertResult<'a> = Result<NameTable<'a>, RidefinitionError<'a>>;
 
 pub struct NameTable<'a> {
     names: HashMap<&'a str, NameTableInfo>,
@@ -65,44 +65,44 @@ impl<'a> NameTable<'a> {
         }
     }
 
-    pub fn insert_automata(&mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
+    pub fn insert_automata(mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
         self.insert_name(name, NameClass::Automata, loc)
     }
 
-    pub fn insert_network(&mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
+    pub fn insert_network(mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
         self.insert_name(name, NameClass::Network, loc)
     }
 
-    pub fn insert_link(&mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
+    pub fn insert_link(mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
         self.insert_name(name, NameClass::Link, loc)
     }
 
-    pub fn insert_event(&mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
+    pub fn insert_event(mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
         self.insert_name(name, NameClass::Event, loc)
     }
 
-    pub fn insert_obs_label(&mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
+    pub fn insert_obs_label(mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
         self.insert_name(name, NameClass::ObsLabel, loc)
     }
 
-    pub fn insert_rel_label(&mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
+    pub fn insert_rel_label(mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
         self.insert_name(name, NameClass::RelLabel, loc)
     }
 
-    pub fn insert_state(&mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
+    pub fn insert_state(mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
         self.insert_name(name, NameClass::State, loc)
     }
 
-    pub fn insert_transition(&mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
+    pub fn insert_transition(mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
         self.insert_name(name, NameClass::Transition, loc)
     }
 
-    pub fn insert_request(&mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
+    pub fn insert_request(mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
         self.insert_name(name, NameClass::Request, loc)
     }
 
     fn insert_name(
-        &mut self,
+        mut self,
         name: &'a str,
         class: NameClass,
         loc: (usize, usize),
@@ -111,8 +111,8 @@ impl<'a> NameTable<'a> {
             let err = self.make_error(prev_def, name, class, loc);
             Err(err)
         } else {
-            self.insert_key_value(name, loc, class);
-            Ok(())
+            self = self.insert_key_value(name, loc, class);
+            Ok(self)
         }
     }
 
@@ -129,9 +129,10 @@ impl<'a> NameTable<'a> {
         RidefinitionError::new(name, prev_loc, new_loc, prev_def.class, class)
     }
 
-    fn insert_key_value(&mut self, name: &'a str, loc: (usize, usize), class: NameClass) {
+    fn insert_key_value(mut self, name: &'a str, loc: (usize, usize), class: NameClass) -> Self {
         let value = NameTableInfo::new(loc, class);
         self.names.insert(name, value);
+        self
     }
 }
 
@@ -142,13 +143,13 @@ mod test {
 
     #[test]
     fn test_ridefinition() {
-        let mut name_table = NameTable::new();
+        let name_table = NameTable::new();
 
-        name_table.insert_automata("testname", (0, 5)).unwrap();
-        name_table.insert_event("hill", (5, 6)).unwrap();
-        name_table.insert_link("superlink", (7, 8)).unwrap();
-        name_table.insert_network("sun", (10, 12)).unwrap();
-        name_table.insert_obs_label("labelA", (45, 142)).unwrap();
+        let name_table = name_table.insert_automata("testname", (0, 5)).unwrap();
+        let name_table = name_table.insert_event("hill", (5, 6)).unwrap();
+        let name_table = name_table.insert_link("superlink", (7, 8)).unwrap();
+        let name_table = name_table.insert_network("sun", (10, 12)).unwrap();
+        let name_table = name_table.insert_obs_label("labelA", (45, 142)).unwrap();
 
         let result = name_table.insert_transition("testname", (340, 543));
         match result {
@@ -172,13 +173,13 @@ mod test {
     fn test_unique_names() {
         let mut name_table = NameTable::new();
 
-        name_table.insert_automata("testname", (0, 5)).unwrap();
-        name_table.insert_event("hill", (5, 6)).unwrap();
-        name_table.insert_link("superlink", (7, 8)).unwrap();
-        name_table.insert_network("sun", (10, 12)).unwrap();
-        name_table.insert_obs_label("labelA", (45, 142)).unwrap();
-        name_table.insert_rel_label("labelB", (416, 543)).unwrap();
-        name_table.insert_state("status", (600, 601)).unwrap();
+        let name_table = name_table.insert_automata("testname", (0, 5)).unwrap();
+        let name_table = name_table.insert_event("hill", (5, 6)).unwrap();
+        let name_table = name_table.insert_link("superlink", (7, 8)).unwrap();
+        let name_table = name_table.insert_network("sun", (10, 12)).unwrap();
+        let name_table = name_table.insert_obs_label("labelA", (45, 142)).unwrap();
+        let name_table = name_table.insert_rel_label("labelB", (416, 543)).unwrap();
+        let name_table = name_table.insert_state("status", (600, 601)).unwrap();
         name_table.insert_transition("trans", (786, 809)).unwrap();
     }
 }
