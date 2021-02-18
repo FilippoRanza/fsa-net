@@ -13,5 +13,11 @@ impl Location {
     }
 }
 
+impl From<(usize, usize)> for Location {
+    fn from(loc: (usize, usize)) -> Self {
+        Self::from_tuple(loc)
+    }
+}
+
 mod name_table;
 mod name_table_factory;

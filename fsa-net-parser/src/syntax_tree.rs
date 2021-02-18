@@ -220,8 +220,8 @@ pub struct Link<'a> {
 #[add_location]
 #[derive(DefaultBuilder)]
 pub struct Request<'a> {
-    name: &'a str,
-    list: Vec<Command<'a>>,
+    pub name: &'a str,
+    pub list: Vec<Command<'a>>,
 }
 
 pub enum Command<'a> {

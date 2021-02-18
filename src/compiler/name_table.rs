@@ -1,139 +1,182 @@
 use super::Location;
 use std::collections::HashMap;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-enum NameClass {
-    Network,
-    Automata,
-    Link,
-    Event,
-    ObsLabel,
-    RelLabel,
-    State,
-    Transition,
-    Request,
+type Loc = (usize, usize);
+
+pub enum NameError<'a> {
+    Global(GlobalNameError<'a>),
 }
 
-struct NameTableInfo {
-    loc: (usize, usize),
-    class: NameClass,
-}
-
-impl NameTableInfo {
-    fn new(loc: (usize, usize), class: NameClass) -> Self {
-        Self { loc, class }
+impl<'a> From<GlobalNameError<'a>> for NameError<'a> {
+    fn from(err: GlobalNameError<'a>) -> Self {
+        Self::Global(err)
     }
 }
 
-#[derive(Debug)]
-pub struct RidefinitionError<'a> {
-    name: &'a str,
-    orig_loc: Location,
-    ridef_loc: Location,
-    orig_class: NameClass,
-    ridef_class: NameClass,
+#[derive(Debug, PartialEq)]
+enum GlobalClassName {
+    Network,
+    Request,
 }
 
-impl<'a> RidefinitionError<'a> {
-    fn new(
-        name: &'a str,
-        orig_loc: Location,
-        ridef_loc: Location,
-        orig_class: NameClass,
-        ridef_class: NameClass,
-    ) -> Self {
+#[derive(Debug)]
+pub struct GlobalNameError<'a> {
+    name: &'a str,
+    class: GlobalClassName,
+    orig_loc: Location,
+    new_loc: Location,
+}
+
+impl<'a> GlobalNameError<'a> {
+    fn new(name: &'a str, class: GlobalClassName, orig_loc: Loc, new_loc: Loc) -> Self {
         Self {
             name,
-            orig_class,
-            orig_loc,
-            ridef_class,
-            ridef_loc,
+            class,
+            orig_loc: orig_loc.into(),
+            new_loc: new_loc.into(),
         }
     }
 }
 
-pub type InsertResult<'a> = Result<NameTable<'a>, RidefinitionError<'a>>;
-
-pub struct NameTable<'a> {
-    names: HashMap<&'a str, NameTableInfo>,
+pub struct UndefinedNetwork<'a> {
+    names: Vec<(&'a str, Loc)>,
 }
 
-impl<'a> NameTable<'a> {
+type GlobalNameResult<'a> = Result<GlobalNameTable<'a>, GlobalNameError<'a>>;
+
+#[derive(Debug)]
+pub struct GlobalNameTable<'a> {
+    names: HashMap<&'a str, NetworkInfo>,
+}
+
+impl<'a> GlobalNameTable<'a> {
     pub fn new() -> Self {
         Self {
             names: HashMap::new(),
         }
     }
 
-    pub fn insert_automata(mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
-        self.insert_name(name, NameClass::Automata, loc)
+    pub fn validate(self) -> Result<Self, UndefinedNetwork<'a>> {
+        let undef_nets: Vec<(&'a str, Loc)> = self
+            .names
+            .iter()
+            .filter_map(|(name, net_info)| {
+                if net_info.network_loc.is_none() {
+                    Some((*name, net_info.request_loc.unwrap()))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        if undef_nets.len() == 0 {
+            Ok(self)
+        } else {
+            Err(UndefinedNetwork { names: undef_nets })
+        }
     }
 
-    pub fn insert_network(mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
-        self.insert_name(name, NameClass::Network, loc)
+    pub fn insert_network(mut self, name: &'a str, loc: (usize, usize)) -> GlobalNameResult {
+        self.insert_name(name, GlobalClassName::Network, loc)
     }
 
-    pub fn insert_link(mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
-        self.insert_name(name, NameClass::Link, loc)
-    }
-
-    pub fn insert_event(mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
-        self.insert_name(name, NameClass::Event, loc)
-    }
-
-    pub fn insert_obs_label(mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
-        self.insert_name(name, NameClass::ObsLabel, loc)
-    }
-
-    pub fn insert_rel_label(mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
-        self.insert_name(name, NameClass::RelLabel, loc)
-    }
-
-    pub fn insert_state(mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
-        self.insert_name(name, NameClass::State, loc)
-    }
-
-    pub fn insert_transition(mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
-        self.insert_name(name, NameClass::Transition, loc)
-    }
-
-    pub fn insert_request(mut self, name: &'a str, loc: (usize, usize)) -> InsertResult<'a> {
-        self.insert_name(name, NameClass::Request, loc)
+    pub fn insert_request(mut self, name: &'a str, loc: (usize, usize)) -> GlobalNameResult {
+        self.insert_name(name, GlobalClassName::Request, loc)
     }
 
     fn insert_name(
         mut self,
         name: &'a str,
-        class: NameClass,
+        class: GlobalClassName,
         loc: (usize, usize),
-    ) -> InsertResult<'a> {
-        if let Some(prev_def) = self.names.get(name) {
-            let err = self.make_error(prev_def, name, class, loc);
+    ) -> GlobalNameResult {
+        if self.names.contains_key(name) {
+            self.update_name_info(name, class, loc)
+        } else {
+            self.add_new_name(name, class, loc)
+        }
+    }
+
+    fn update_name_info(
+        mut self,
+        name: &'a str,
+        class: GlobalClassName,
+        loc: Loc,
+    ) -> GlobalNameResult {
+        let prev = self.names.get_mut(name).unwrap();
+
+        let err = match (&prev.state, class) {
+            (NetworkDefinitionState::NetworkDefined, GlobalClassName::Request) => {
+                prev.state = NetworkDefinitionState::FullDefined;
+                prev.request_loc = Some(loc);
+                None
+            }
+            (NetworkDefinitionState::RequestDefined, GlobalClassName::Network) => {
+                prev.state = NetworkDefinitionState::FullDefined;
+                prev.network_loc = Some(loc);
+                None
+            }
+            (_, class) => {
+                let orig_loc = match class {
+                    GlobalClassName::Network => prev.network_loc.unwrap(),
+                    GlobalClassName::Request => prev.request_loc.unwrap(),
+                };
+                let err = GlobalNameError::new(name, class, orig_loc, loc);
+                Some(err)
+            }
+        };
+
+        if let Some(err) = err {
             Err(err)
         } else {
-            self = self.insert_key_value(name, loc, class);
             Ok(self)
         }
     }
 
-    fn make_error(
-        &self,
-        prev_def: &NameTableInfo,
+    fn add_new_name(
+        mut self,
         name: &'a str,
-        class: NameClass,
+        class: GlobalClassName,
         loc: (usize, usize),
-    ) -> RidefinitionError<'a> {
-        let new_loc = Location::from_tuple(loc);
-        let prev_loc = Location::from_tuple(prev_def.loc);
+    ) -> GlobalNameResult {
+        let info = match class {
+            GlobalClassName::Network => NetworkInfo::new_network(loc),
+            GlobalClassName::Request => NetworkInfo::new_request(loc),
+        };
+        self.names.insert(name, info);
+        Ok(self)
+    }
+}
 
-        RidefinitionError::new(name, prev_loc, new_loc, prev_def.class, class)
+#[derive(Debug)]
+struct NetworkInfo {
+    state: NetworkDefinitionState,
+    network_loc: Option<Loc>,
+    request_loc: Option<Loc>,
+}
+
+impl NetworkInfo {
+    fn new_network(loc: (usize, usize)) -> NetworkInfo {
+        Self {
+            state: NetworkDefinitionState::NetworkDefined,
+            network_loc: Some(loc),
+            request_loc: None,
+        }
     }
 
-    fn insert_key_value(mut self, name: &'a str, loc: (usize, usize), class: NameClass) -> Self {
-        let value = NameTableInfo::new(loc, class);
-        self.names.insert(name, value);
-        self
+    fn new_request(loc: (usize, usize)) -> Self {
+        Self {
+            state: NetworkDefinitionState::RequestDefined,
+            network_loc: None,
+            request_loc: Some(loc),
+        }
     }
+}
+
+#[derive(Debug)]
+enum NetworkDefinitionState {
+    RequestDefined,
+    NetworkDefined,
+    FullDefined,
 }
 
 #[cfg(test)]
@@ -142,44 +185,65 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_ridefinition() {
-        let name_table = NameTable::new();
+    fn test_global_name_ridefinition() {
+        let name_table = GlobalNameTable::new();
 
-        let name_table = name_table.insert_automata("testname", (0, 5)).unwrap();
-        let name_table = name_table.insert_event("hill", (5, 6)).unwrap();
-        let name_table = name_table.insert_link("superlink", (7, 8)).unwrap();
-        let name_table = name_table.insert_network("sun", (10, 12)).unwrap();
-        let name_table = name_table.insert_obs_label("labelA", (45, 142)).unwrap();
+        let name_table = name_table.insert_network("testNet", (0, 1)).unwrap();
+        let name_table = name_table.insert_request("testNet", (5, 6)).unwrap();
 
-        let result = name_table.insert_transition("testname", (340, 543));
+        let result = name_table.insert_network("testNet", (10, 20));
         match result {
-            Ok(_) => panic!("This call should return an error on 'testname'"),
+            Ok(_) => panic!("testNet is redefined"),
             Err(err) => {
-                assert_eq!(err.name, "testname");
-                assert_eq!(err.orig_class, NameClass::Automata);
-                assert_eq!(err.ridef_class, NameClass::Transition);
-                is_same_location(&err.orig_loc, 0, 5);
-                is_same_location(&err.ridef_loc, 340, 543);
+                assert_eq!(err.name, "testNet");
+                assert_eq!(err.class, GlobalClassName::Network);
+
+                assert_eq!(err.orig_loc.begin, 0);
+                assert_eq!(err.orig_loc.end, 1);
+
+                assert_eq!(err.new_loc.begin, 10);
+                assert_eq!(err.new_loc.end, 20);
             }
         }
     }
 
-    fn is_same_location(loc: &Location, begin: usize, end: usize) {
-        assert_eq!(loc.begin, begin);
-        assert_eq!(loc.end, end);
+    #[test]
+    fn test_global_names() {
+        let name_table = GlobalNameTable::new();
+
+        let names = ["testA", "testB", "testC", "testD"];
+        let name_table = names
+            .iter()
+            .try_fold(name_table, |nt, name| nt.insert_network(name, (0, 0)))
+            .unwrap();
+        names
+            .iter()
+            .try_fold(name_table, |nt, name| nt.insert_request(name, (0, 0)))
+            .unwrap();
     }
+
 
     #[test]
-    fn test_unique_names() {
-        let mut name_table = NameTable::new();
+    fn test_undefined_network() {
+        let name_table = GlobalNameTable::new();
 
-        let name_table = name_table.insert_automata("testname", (0, 5)).unwrap();
-        let name_table = name_table.insert_event("hill", (5, 6)).unwrap();
-        let name_table = name_table.insert_link("superlink", (7, 8)).unwrap();
-        let name_table = name_table.insert_network("sun", (10, 12)).unwrap();
-        let name_table = name_table.insert_obs_label("labelA", (45, 142)).unwrap();
-        let name_table = name_table.insert_rel_label("labelB", (416, 543)).unwrap();
-        let name_table = name_table.insert_state("status", (600, 601)).unwrap();
-        name_table.insert_transition("trans", (786, 809)).unwrap();
+        let name_table = name_table.insert_network("a", (0, 1)).unwrap();
+        let name_table = name_table.insert_request("a", (2, 4)).unwrap();
+
+        let name_table = name_table.insert_request("b", (5, 6)).unwrap();
+        let name_table = name_table.insert_request("c", (8, 9)).unwrap();
+        
+        let name_table = name_table.insert_network("d", (10, 11)).unwrap();
+        let name_table = name_table.insert_network("c", (12, 13)).unwrap();
+
+
+        let undefined = name_table.validate().unwrap_err();
+        
+        assert_eq!(undefined.names.len(), 1);
+        let err = undefined.names[0];
+        assert_eq!(err.0, "b");
+        assert_eq!(err.1, (5, 6));
     }
+
+
 }
