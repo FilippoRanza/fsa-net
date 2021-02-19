@@ -3,8 +3,10 @@ use std::collections::HashMap;
 
 type Loc = (usize, usize);
 
+#[derive(Debug)]
 pub enum NameError<'a> {
     Global(GlobalNameError<'a>),
+    UndefinedNetwork(UndefinedNetwork<'a>),
 }
 
 impl<'a> From<GlobalNameError<'a>> for NameError<'a> {
@@ -13,18 +15,24 @@ impl<'a> From<GlobalNameError<'a>> for NameError<'a> {
     }
 }
 
+impl<'a> From<UndefinedNetwork<'a>> for NameError<'a> {
+    fn from(err: UndefinedNetwork<'a>) -> Self {
+        Self::UndefinedNetwork(err)
+    }
+}
+
 #[derive(Debug, PartialEq)]
-enum GlobalClassName {
+pub enum GlobalClassName {
     Network,
     Request,
 }
 
 #[derive(Debug)]
 pub struct GlobalNameError<'a> {
-    name: &'a str,
-    class: GlobalClassName,
-    orig_loc: Location,
-    new_loc: Location,
+    pub name: &'a str,
+    pub class: GlobalClassName,
+    pub orig_loc: Location,
+    pub new_loc: Location,
 }
 
 impl<'a> GlobalNameError<'a> {
@@ -38,8 +46,9 @@ impl<'a> GlobalNameError<'a> {
     }
 }
 
+#[derive(Debug)]
 pub struct UndefinedNetwork<'a> {
-    names: Vec<(&'a str, Loc)>,
+    pub names: Vec<(&'a str, Loc)>,
 }
 
 type GlobalNameResult<'a> = Result<GlobalNameTable<'a>, GlobalNameError<'a>>;
@@ -222,7 +231,6 @@ mod test {
             .unwrap();
     }
 
-
     #[test]
     fn test_undefined_network() {
         let name_table = GlobalNameTable::new();
@@ -232,18 +240,15 @@ mod test {
 
         let name_table = name_table.insert_request("b", (5, 6)).unwrap();
         let name_table = name_table.insert_request("c", (8, 9)).unwrap();
-        
+
         let name_table = name_table.insert_network("d", (10, 11)).unwrap();
         let name_table = name_table.insert_network("c", (12, 13)).unwrap();
 
-
         let undefined = name_table.validate().unwrap_err();
-        
+
         assert_eq!(undefined.names.len(), 1);
         let err = undefined.names[0];
         assert_eq!(err.0, "b");
         assert_eq!(err.1, (5, 6));
     }
-
-
 }
