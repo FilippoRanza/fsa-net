@@ -84,16 +84,16 @@ impl<'a> GlobalNameTable<'a> {
         }
     }
 
-    pub fn insert_network(mut self, name: &'a str, loc: (usize, usize)) -> GlobalNameResult {
+    pub fn insert_network(self, name: &'a str, loc: (usize, usize)) -> GlobalNameResult {
         self.insert_name(name, GlobalClassName::Network, loc)
     }
 
-    pub fn insert_request(mut self, name: &'a str, loc: (usize, usize)) -> GlobalNameResult {
+    pub fn insert_request(self, name: &'a str, loc: (usize, usize)) -> GlobalNameResult {
         self.insert_name(name, GlobalClassName::Request, loc)
     }
 
     fn insert_name(
-        mut self,
+        self,
         name: &'a str,
         class: GlobalClassName,
         loc: (usize, usize),

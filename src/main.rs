@@ -13,5 +13,6 @@ struct Arguments {
 fn main() {
     let args = Arguments::from_args();
     let src_code = input_output::get_fsa_code(&args.file).unwrap();
-    let _ = fsa_net_parser::parse(&src_code).unwrap();
+    let code = fsa_net_parser::parse(&src_code).unwrap();
+    let _ = compiler::build_name_table(&code).unwrap();
 }
