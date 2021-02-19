@@ -188,6 +188,107 @@ enum NetworkDefinitionState {
     FullDefined,
 }
 
+#[derive(Debug)]
+pub struct NetworkNameError<'a> {
+    name: &'a str,
+    orig_loc: Location,
+    ridef_loc: Location,
+    orig_class: NetworkNameClass,
+    ridef_class: NetworkNameClass,
+}
+
+impl<'a> NetworkNameError<'a> {
+    fn new(
+        name: &'a str,
+        orig_loc: Loc,
+        ridef_loc: Loc,
+        orig_class: NetworkNameClass,
+        ridef_class: NetworkNameClass,
+    ) -> Self {
+        Self {
+            name,
+            orig_loc: orig_loc.into(),
+            ridef_loc: ridef_loc.into(),
+            orig_class,
+            ridef_class,
+        }
+    }
+}
+
+type NetworkNameResult<'a> = Result<NetworkNameTable<'a>, NetworkNameError<'a>>;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum NetworkNameClass {
+    Event,
+    Link,
+    ObsLabel,
+    RelLabel,
+    Automata,
+}
+
+#[derive(Debug)]
+pub struct NetworkNameInfo {
+    class: NetworkNameClass,
+    loc: Loc,
+}
+
+impl NetworkNameInfo {
+    fn new(class: NetworkNameClass, loc: Loc) -> Self {
+        Self { class, loc }
+    }
+}
+
+#[derive(Debug)]
+pub struct NetworkNameTable<'a> {
+    net_name: &'a str,
+    names: HashMap<&'a str, NetworkNameInfo>,
+}
+
+impl<'a> NetworkNameTable<'a> {
+    fn new(name: &'a str) -> Self {
+        Self {
+            net_name: name,
+            names: HashMap::new(),
+        }
+    }
+
+    pub fn insert_automata(self, name: &'a str, loc: Loc) -> NetworkNameResult {
+        self.insert_name(name, loc, NetworkNameClass::Automata)
+    }
+
+    pub fn insert_link(self, name: &'a str, loc: Loc) -> NetworkNameResult {
+        self.insert_name(name, loc, NetworkNameClass::Link)
+    }
+
+    pub fn insert_event(self, name: &'a str, loc: Loc) -> NetworkNameResult {
+        self.insert_name(name, loc, NetworkNameClass::Event)
+    }
+
+    pub fn insert_obs_label(self, name: &'a str, loc: Loc) -> NetworkNameResult {
+        self.insert_name(name, loc, NetworkNameClass::ObsLabel)
+    }
+
+    pub fn insert_rel_label(self, name: &'a str, loc: Loc) -> NetworkNameResult {
+        self.insert_name(name, loc, NetworkNameClass::RelLabel)
+    }
+
+    fn insert_name(
+        mut self,
+        name: &'a str,
+        loc: Loc,
+        class: NetworkNameClass,
+    ) -> NetworkNameResult {
+        if let Some(prev_def) = self.names.get(name) {
+            let err = NetworkNameError::new(name, prev_def.loc, loc, prev_def.class, class);
+            Err(err)
+        } else {
+            let info = NetworkNameInfo::new(class, loc);
+            self.names.insert(name, info);
+            Ok(self)
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
 
@@ -251,4 +352,42 @@ mod test {
         assert_eq!(err.0, "b");
         assert_eq!(err.1, (5, 6));
     }
+
+
+    #[test]
+    fn test_correct_network_names() {
+        let name_table = NetworkNameTable::new("test");
+        let name_table = name_table.insert_automata("A", (0, 1)).unwrap();
+        let name_table = name_table.insert_event("ev", (2, 3)).unwrap();
+        let name_table = name_table.insert_link("l1", (5, 6)).unwrap();
+        let name_table = name_table.insert_obs_label("ob", (7, 8)).unwrap();
+        let _ = name_table.insert_rel_label("re", (10, 12)).unwrap();
+    }
+
+    #[test]
+    fn test_network_name_ridefinition() {
+        let name_table = NetworkNameTable::new("test");
+        let name_table = name_table.insert_automata("A", (0, 1)).unwrap();
+        let name_table = name_table.insert_event("ev", (2, 3)).unwrap();
+        let name_table = name_table.insert_link("l1", (5, 6)).unwrap();
+        let name_table = name_table.insert_obs_label("ob", (7, 8)).unwrap();
+        let error = name_table.insert_rel_label("A", (10, 12)).expect_err("`A` is already an automata");
+        assert_eq!(error.name, "A");
+        
+        assert_eq!(error.orig_class, NetworkNameClass::Automata);
+        assert_eq!(error.ridef_class, NetworkNameClass::RelLabel);
+        
+        assert_eq!(error.orig_loc.begin, 0);
+        assert_eq!(error.orig_loc.end, 1);
+
+        assert_eq!(error.ridef_loc.begin, 10);
+        assert_eq!(error.ridef_loc.end, 12);
+        
+
+    }
+
+
+
+
+
 }
