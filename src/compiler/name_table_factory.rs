@@ -1,4 +1,4 @@
-use super::name_table::{GlobalNameTable, NameError};
+use super::name_table::*;
 
 use fsa_net_parser::syntax_tree::*;
 use fsa_net_parser::Code;
@@ -6,13 +6,64 @@ use fsa_net_parser::Code;
 pub fn build_name_table<'a>(code: &Code<'a>) -> Result<GlobalNameTable<'a>, NameError<'a>> {
     let name_table = GlobalNameTable::new();
     let name_table = code.iter().try_fold(name_table, |nt, curr| match curr {
-        Block::Network(net) => nt.insert_network(net.name, net.get_location()),
-        Block::Request(req) => nt.insert_request(req.name, req.get_location()),
+        Block::Network(net) => collect_network(nt, net),
+        Block::Request(req) => collect_request(nt, req),
     })?;
 
     let name_table = name_table.validate()?;
 
     Ok(name_table)
+}
+
+fn collect_network<'a>(
+    name_table: GlobalNameTable<'a>,
+    network: &Network<'a>,
+) -> Result<GlobalNameTable<'a>, NameError<'a>> {
+    let network_table = NetworkNameTable::new(network.name);
+
+    let network_table = collect_network_parameters(&network.params, network_table)?;
+    let name_table =
+        name_table.insert_network(network.name, network.get_location(), network_table)?;
+
+    Ok(name_table)
+}
+
+fn collect_network_parameters<'a>(
+    param_list: &[NetworkParameter<'a>],
+    name_table: NetworkNameTable<'a>,
+) -> NetworkNameResult<'a> {
+    param_list
+        .iter()
+        .try_fold(name_table, collect_network_parameter)
+}
+
+fn collect_network_parameter<'a>(
+    nt: NetworkNameTable<'a>,
+    net_param: &NetworkParameter<'a>,
+) -> NetworkNameResult<'a> {
+    match net_param {
+        NetworkParameter::Automata(automata) => {
+            nt.insert_automata(automata.name, automata.get_location())
+        }
+        NetworkParameter::Events(events) => events
+            .iter()
+            .try_fold(nt, |nt, ev| nt.insert_event(ev, (0, 0))),
+        NetworkParameter::Link(link) => nt.insert_link(link.name, link.get_location()),
+        NetworkParameter::ObserveLabels(labels) => labels
+            .iter()
+            .try_fold(nt, |nt, obs| nt.insert_obs_label(obs, (0, 0))),
+        NetworkParameter::RelevanceLabels(labels) => labels
+            .iter()
+            .try_fold(nt, |nt, rel| nt.insert_rel_label(rel, (0, 0))),
+    }
+}
+
+fn collect_request<'a>(
+    nt: GlobalNameTable<'a>,
+    req: &Request<'a>,
+) -> Result<GlobalNameTable<'a>, NameError<'a>> {
+    let nt = nt.insert_request(req.name, req.get_location())?;
+    Ok(nt)
 }
 
 #[cfg(test)]
@@ -71,6 +122,23 @@ mod test {
                 assert_eq!(err.class, GlobalClassName::Network);
             }
             err => panic!("expected RidefinedNetwork, found {:?}", err),
+        }
+    }
+
+    #[test]
+    fn test_ridefined_automata() {
+        let code = load_file_by_name("ridefined-automata");
+        let ast = parse(&code).expect("`ridefined-automata` should be syntactically correct");
+
+        let err = build_name_table(&ast).expect_err("`ridefined-automata` contains a redefined automata");
+
+        match err {
+            NameError::NetworkNameError(err) => {
+                assert_eq!(err.name, "A");
+                assert_eq!(err.orig_class, NetworkNameClass::Automata);
+                assert_eq!(err.ridef_class, NetworkNameClass::Automata);
+            },
+            err => panic!("expected NetworkNameError, found {:?}", err)
         }
     }
 
