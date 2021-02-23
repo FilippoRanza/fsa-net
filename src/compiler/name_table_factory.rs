@@ -14,7 +14,7 @@ pub fn build_name_table<'a>(code: &Code<'a>) -> Result<GlobalNameTable<'a>, Name
 }
 
 fn collect_network<'a>(nt: GlobalNameTable<'a>, net: &Network<'a>) -> GlobalNameResult<'a> {
-    let nt = nt.add_network(net.name, net.get_location())?;
+    let nt = nt.add_declare_network(net.name, net.get_location())?;
     let nt = net.params.iter().try_fold(nt, collect_net_param)?;
     Ok(nt.exit_network())
 }
@@ -27,19 +27,19 @@ fn collect_net_param<'a>(
         NetworkParameter::Automata(automata) => collect_automata(nt, automata),
         NetworkParameter::Events(events) => events
             .iter()
-            .try_fold(nt, |nt, ev| nt.add_event(ev, (0, 0))),
+            .try_fold(nt, |nt, ev| nt.add_declare_event(ev, (0, 0))),
         NetworkParameter::ObserveLabels(labels) => labels
             .iter()
-            .try_fold(nt, |nt, lbl| nt.add_rel_label(lbl, (0, 0))),
+            .try_fold(nt, |nt, lbl| nt.add_declare_rel_label(lbl, (0, 0))),
         NetworkParameter::RelevanceLabels(labels) => labels
             .iter()
-            .try_fold(nt, |nt, lbl| nt.add_obs_label(lbl, (0, 0))),
-        NetworkParameter::Link(link) => nt.add_link(link.name, link.get_location()),
+            .try_fold(nt, |nt, lbl| nt.add_declare_obs_label(lbl, (0, 0))),
+        NetworkParameter::Link(link) => nt.add_declare_link(link.name, link.get_location()),
     }
 }
 
 fn collect_automata<'a>(nt: GlobalNameTable<'a>, automata: &Automata<'a>) -> GlobalNameResult<'a> {
-    let nt = nt.add_automata(automata.name, automata.get_location())?;
+    let nt = nt.add_declare_automata(automata.name, automata.get_location())?;
     let nt = automata
         .params
         .iter()
@@ -53,10 +53,12 @@ fn collect_automata_param<'a>(
 ) -> GlobalNameResult<'a> {
     match param {
         AutomataParameter::StateDecl(state) => match state {
-            StateDeclaration::Begin(state) => nt.add_begin(state, (0, 0)),
-            StateDeclaration::State(state) => nt.add_state(state, (0, 0)),
+            StateDeclaration::Begin(state) => nt.add_declare_begin(state, (0, 0)),
+            StateDeclaration::State(state) => nt.add_declare_state(state, (0, 0)),
         },
-        AutomataParameter::Transition(trans) => nt.add_transition(trans.name, trans.get_location()),
+        AutomataParameter::Transition(trans) => {
+            nt.add_declare_transition(trans.name, trans.get_location())
+        }
     }
 }
 
@@ -95,6 +97,23 @@ mod test {
                 "Expected BeginStateError(MultipleBeginState), found {:?}",
                 err
             ),
+        }
+    }
+
+    #[test]
+    fn test_duplicated_automata() {
+        let code = load_code_from_file("ridefined-automata");
+        let ast = parse(&code).expect("`ridefined-automata` should be syntactically correct");
+
+        let err = build_name_table(&ast)
+            .expect_err("`ridefined-automata` should contain semantic errors");
+        match err {
+            NameError::NameRidefinitionError(err) => {
+                assert_eq!(err.name, "A");
+                assert_eq!(err.orig_class, NameClass::Automata);
+                assert_eq!(err.ridef_class, NameClass::Automata);
+            }
+            err => panic!("Expected NameRidefintionError, found: {:?}", err),
         }
     }
 
