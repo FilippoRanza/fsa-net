@@ -1,8 +1,7 @@
 use super::Location;
 use std::collections::HashMap;
 
-
-use crate::{new_name_error, into_name_error};
+use crate::{into_name_error, new_name_error};
 
 type Loc = (usize, usize);
 
@@ -13,7 +12,7 @@ pub struct GlobalNameTable<'a> {
 }
 
 impl<'a> GlobalNameTable<'a> {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             names: HashMap::new(),
             status: CollectionStatus::Global,
@@ -314,11 +313,10 @@ pub enum NameError<'a> {
     BeginStateError(BeginStateError<'a>),
 }
 
-into_name_error!{GlobalNameError}
-into_name_error!{UndefinedNetwork}
-into_name_error!{NameRidefinitionError}
-into_name_error!{BeginStateError}
- 
+into_name_error! {GlobalNameError}
+into_name_error! {UndefinedNetwork}
+into_name_error! {NameRidefinitionError}
+into_name_error! {BeginStateError}
 
 #[derive(Debug, PartialEq)]
 pub enum GlobalClassName {
@@ -350,12 +348,6 @@ pub struct UndefinedNetwork<'a> {
     pub names: Vec<(&'a str, Loc)>,
 }
 
-#[derive(Debug)]
-enum NetworkDefinitionState {
-    RequestDefined,
-    NetworkDefined,
-    FullDefined,
-}
 
 #[derive(Debug)]
 pub struct NameRidefinitionError<'a> {
@@ -366,15 +358,11 @@ pub struct NameRidefinitionError<'a> {
     ridef_class: NameClass,
 }
 
-
-
 #[derive(Debug)]
 pub enum BeginStateError<'a> {
     NoBeginState,
     MultipleBeginState(Vec<&'a str>),
 }
-
-
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum NameClass {
@@ -547,7 +535,6 @@ mod test {
         }
     }
 
-
     #[test]
     fn test_state_ridefinition() {
         let name_table = GlobalNameTable::new();
@@ -557,19 +544,18 @@ mod test {
         let name_table = name_table.add_automata("at", (10, 12)).unwrap();
         let name_table = name_table.add_begin("s0", (45, 12)).unwrap();
         let name_table = name_table.add_state("s1", (56, 142)).unwrap();
-        
 
-        let err = name_table.add_state("s1", (67, 132)).expect_err("State s1 is defined twice");
+        let err = name_table
+            .add_state("s1", (67, 132))
+            .expect_err("State s1 is defined twice");
 
         match err {
             NameError::NameRidefinitionError(err) => {
                 assert_eq!(err.name, "s1");
                 assert_eq!(err.orig_class, NameClass::State);
                 assert_eq!(err.ridef_class, NameClass::State);
-            },
-            err => panic!("expected NameRidefinitionError: found `{:?}`", err)
+            }
+            err => panic!("expected NameRidefinitionError: found `{:?}`", err),
         }
-
-
     }
 }
