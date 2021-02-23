@@ -2,19 +2,19 @@ use super::name_table::*;
 
 use fsa_net_parser::syntax_tree::*;
 use fsa_net_parser::Code;
-
+/*
 pub fn build_name_table<'a>(code: &Code<'a>) -> Result<GlobalNameTable<'a>, NameError<'a>> {
     let name_table = GlobalNameTable::new();
-    let name_table = code.iter().try_fold(name_table, |nt, curr| match curr {
+    /* let name_table = code.iter().try_fold(name_table, |nt, curr| match curr {
         Block::Network(net) => collect_network(nt, net),
         Block::Request(req) => collect_request(nt, req),
     })?;
 
-    let name_table = name_table.validate()?;
+    let name_table = name_table.validate()?; */
 
     Ok(name_table)
 }
-
+/*
 fn collect_network<'a>(
     name_table: GlobalNameTable<'a>,
     network: &Network<'a>,
@@ -64,7 +64,7 @@ fn collect_request<'a>(
 ) -> Result<GlobalNameTable<'a>, NameError<'a>> {
     let nt = nt.insert_request(req.name, req.get_location())?;
     Ok(nt)
-}
+} */
 
 #[cfg(test)]
 mod test {
@@ -158,3 +158,4 @@ mod test {
         buff
     }
 }
+*/
