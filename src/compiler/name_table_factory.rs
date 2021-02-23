@@ -83,14 +83,18 @@ mod test {
         let code = load_code_from_file("duplicate-begin");
         let ast = parse(&code).expect("`duplicate-begin` should be syntactically correct");
 
-        let err = build_name_table(&ast).expect_err("`duplicate-begin` should contain semantic errors");
+        let err =
+            build_name_table(&ast).expect_err("`duplicate-begin` should contain semantic errors");
         match err {
             NameError::BeginStateError(BeginStateError::MultipleBeginState(states)) => {
                 assert_eq!(states.len(), 2);
                 assert!(states.contains(&"s0"));
                 assert!(states.contains(&"s1"));
-            },
-            err => panic!("Expected BeginStateError(MultipleBeginState), found {:?}", err)
+            }
+            err => panic!(
+                "Expected BeginStateError(MultipleBeginState), found {:?}",
+                err
+            ),
         }
     }
 
@@ -99,13 +103,13 @@ mod test {
         let code = load_code_from_file("missing-begin");
         let ast = parse(&code).expect("`missing-begin` should be syntactically correct");
 
-        let err = build_name_table(&ast).expect_err("`missing-begin` should contain semantic errors");
+        let err =
+            build_name_table(&ast).expect_err("`missing-begin` should contain semantic errors");
         match err {
-            NameError::BeginStateError(BeginStateError::NoBeginState) => {},
-            err => panic!("Expected BeginStateError(NoBeginState), found {:?}", err)
+            NameError::BeginStateError(BeginStateError::NoBeginState) => {}
+            err => panic!("Expected BeginStateError(NoBeginState), found {:?}", err),
         }
     }
-
 
     fn load_code_from_file(name: &str) -> String {
         let file_path = if name.ends_with(".fnl") {
