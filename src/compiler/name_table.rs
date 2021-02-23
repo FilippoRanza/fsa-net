@@ -2,8 +2,7 @@ use super::Location;
 use std::collections::HashMap;
 
 
-use macro_derive::IntoNameError;
-use crate::new_name_error;
+use crate::{new_name_error, into_name_error};
 
 type Loc = (usize, usize);
 
@@ -315,13 +314,19 @@ pub enum NameError<'a> {
     BeginStateError(BeginStateError<'a>),
 }
 
+into_name_error!{GlobalNameError}
+into_name_error!{UndefinedNetwork}
+into_name_error!{NameRidefinitionError}
+into_name_error!{BeginStateError}
+ 
+
 #[derive(Debug, PartialEq)]
 pub enum GlobalClassName {
     Network,
     Request,
 }
 
-#[derive(Debug, IntoNameError)]
+#[derive(Debug)]
 pub struct GlobalNameError<'a> {
     pub name: &'a str,
     pub class: GlobalClassName,
@@ -340,7 +345,7 @@ impl<'a> GlobalNameError<'a> {
     }
 }
 
-#[derive(Debug, IntoNameError)]
+#[derive(Debug)]
 pub struct UndefinedNetwork<'a> {
     pub names: Vec<(&'a str, Loc)>,
 }
@@ -352,7 +357,7 @@ enum NetworkDefinitionState {
     FullDefined,
 }
 
-#[derive(Debug, IntoNameError)]
+#[derive(Debug)]
 pub struct NameRidefinitionError<'a> {
     name: &'a str,
     orig_loc: Loc,
@@ -361,7 +366,9 @@ pub struct NameRidefinitionError<'a> {
     ridef_class: NameClass,
 }
 
-#[derive(Debug, IntoNameError)]
+
+
+#[derive(Debug)]
 pub enum BeginStateError<'a> {
     NoBeginState,
     MultipleBeginState(Vec<&'a str>),
@@ -434,6 +441,17 @@ macro_rules! new_name_error {
         let name_error = NameError::NameRidefinitionError(err);
         Err(name_error)
     }};
+}
+
+#[macro_export]
+macro_rules! into_name_error {
+    ($name:ident ) => {
+        impl<'a> From<$name<'a>> for NameError<'a> {
+            fn from(err: $name) -> NameError {
+                NameError::$name(err)
+            }
+        }
+    };
 }
 
 #[cfg(test)]

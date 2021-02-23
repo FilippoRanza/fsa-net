@@ -9,7 +9,6 @@ edition = "2018"
 [dependencies]
 fsa-net-parser = { path = 'fsa-net-parser' }
 structopt = "0.3.21"
-macro-derive = {path = "macro-derive"}
 
 [dev-dependencies]
 lazy_static = "1.4.0"
