@@ -1,6 +1,8 @@
 use super::Location;
 use std::collections::HashMap;
 
+
+use macro_derive::IntoNameError;
 use crate::new_name_error;
 
 type Loc = (usize, usize);
@@ -170,7 +172,7 @@ impl<'a> GlobalNameTable<'a> {
     fn check_global_name(&self, name: &'a str, loc: Loc) -> Result<(), NameError<'a>> {
         if let Some(prev) = self.names.get(name) {
             let err = GlobalNameError::new(name, GlobalClassName::Network, prev.loc, loc);
-            Err(NameError::Global(err))
+            Err(NameError::GlobalNameError(err))
         } else {
             Ok(())
         }
@@ -307,28 +309,10 @@ enum NameStatus {
 
 #[derive(Debug)]
 pub enum NameError<'a> {
-    Global(GlobalNameError<'a>),
+    GlobalNameError(GlobalNameError<'a>),
     UndefinedNetwork(UndefinedNetwork<'a>),
     NameRidefinitionError(NameRidefinitionError<'a>),
     BeginStateError(BeginStateError<'a>),
-}
-
-impl<'a> From<GlobalNameError<'a>> for NameError<'a> {
-    fn from(err: GlobalNameError<'a>) -> Self {
-        Self::Global(err)
-    }
-}
-
-impl<'a> From<UndefinedNetwork<'a>> for NameError<'a> {
-    fn from(err: UndefinedNetwork<'a>) -> Self {
-        Self::UndefinedNetwork(err)
-    }
-}
-
-impl<'a> From<NameRidefinitionError<'a>> for NameError<'a> {
-    fn from(err: NameRidefinitionError<'a>) -> Self {
-        Self::NameRidefinitionError(err)
-    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -337,7 +321,7 @@ pub enum GlobalClassName {
     Request,
 }
 
-#[derive(Debug)]
+#[derive(Debug, IntoNameError)]
 pub struct GlobalNameError<'a> {
     pub name: &'a str,
     pub class: GlobalClassName,
@@ -356,7 +340,7 @@ impl<'a> GlobalNameError<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, IntoNameError)]
 pub struct UndefinedNetwork<'a> {
     pub names: Vec<(&'a str, Loc)>,
 }
@@ -368,7 +352,7 @@ enum NetworkDefinitionState {
     FullDefined,
 }
 
-#[derive(Debug)]
+#[derive(Debug, IntoNameError)]
 pub struct NameRidefinitionError<'a> {
     name: &'a str,
     orig_loc: Loc,
@@ -377,17 +361,13 @@ pub struct NameRidefinitionError<'a> {
     ridef_class: NameClass,
 }
 
-#[derive(Debug)]
+#[derive(Debug, IntoNameError)]
 pub enum BeginStateError<'a> {
     NoBeginState,
     MultipleBeginState(Vec<&'a str>),
 }
 
-impl<'a> From<BeginStateError<'a>> for NameError<'a> {
-    fn from(err: BeginStateError<'a>) -> Self {
-        Self::BeginStateError(err)
-    }
-}
+
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum NameClass {
