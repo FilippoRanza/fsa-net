@@ -348,7 +348,6 @@ pub struct UndefinedNetwork<'a> {
     pub names: Vec<(&'a str, Loc)>,
 }
 
-
 #[derive(Debug)]
 pub struct NameRidefinitionError<'a> {
     name: &'a str,
