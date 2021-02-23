@@ -61,4 +61,64 @@ fn collect_automata_param<'a>(
 }
 
 #[cfg(test)]
-mod test {}
+mod test {
+
+    use super::*;
+    use fsa_net_parser::parse;
+
+    use std::fs::File;
+    use std::io::Read;
+    use std::path::PathBuf;
+
+    #[test]
+    fn test_correct_file_code() {
+        let code = load_code_from_file("correct-code");
+        let ast = parse(&code).expect("`correct-code` should be syntactically correct");
+
+        let _ = build_name_table(&ast).unwrap();
+    }
+
+    #[test]
+    fn test_ridefined_begin_state() {
+        let code = load_code_from_file("duplicate-begin");
+        let ast = parse(&code).expect("`duplicate-begin` should be syntactically correct");
+
+        let err = build_name_table(&ast).expect_err("`duplicate-begin` should contain semantic errors");
+        match err {
+            NameError::BeginStateError(BeginStateError::MultipleBeginState(states)) => {
+                assert_eq!(states.len(), 2);
+                assert!(states.contains(&"s0"));
+                assert!(states.contains(&"s1"));
+            },
+            err => panic!("Expected BeginStateError(MultipleBeginState), found {:?}", err)
+        }
+    }
+
+    #[test]
+    fn test_missing_begin_state() {
+        let code = load_code_from_file("missing-begin");
+        let ast = parse(&code).expect("`missing-begin` should be syntactically correct");
+
+        let err = build_name_table(&ast).expect_err("`missing-begin` should contain semantic errors");
+        match err {
+            NameError::BeginStateError(BeginStateError::NoBeginState) => {},
+            err => panic!("Expected BeginStateError(NoBeginState), found {:?}", err)
+        }
+    }
+
+
+    fn load_code_from_file(name: &str) -> String {
+        let file_path = if name.ends_with(".fnl") {
+            PathBuf::from("fnl-test-code").join(name)
+        } else {
+            let name = format!("{}.fnl", name);
+            PathBuf::from("fnl-test-code").join(name)
+        };
+
+        let mut buff = String::new();
+        let mut file = File::open(&file_path).expect(&format!("{:?} should exist", &file_path));
+        file.read_to_string(&mut buff)
+            .expect(&format!("{:?} should be read", &file_path));
+        buff
+    }
+}
