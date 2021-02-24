@@ -1,13 +1,13 @@
 use super::Location;
 use std::collections::HashMap;
 
-use crate::{into_name_error, new_automata_name_status, new_name_error};
+use crate::{into_name_error,  new_name_error};
 
 type Loc = (usize, usize);
 
 #[derive(Debug)]
 pub struct GlobalNameTable<'a> {
-    names: HashMap<&'a str, GlobalName<'a>>,
+    names: HashMap<&'a str, NetworkNameTable<'a>>,
     status: CollectionStatus<'a>,
 }
 
@@ -116,10 +116,9 @@ impl<'a> GlobalNameTable<'a> {
             table.stat.validate(net_name, table.loc)?;
             for (name, item) in table.names.iter() {
                 item.stat.validate(name, (0, 0))?;
-                match &item.class {
-                    NetworkName::Automata(automata) => automata.validate()?,
-                    _ => {}
-                }
+            }
+            for automata in table.automata.values() {
+                automata.validate()?;
             }
         }
 
@@ -134,25 +133,13 @@ impl<'a> GlobalNameTable<'a> {
         stat: NameStatus,
     ) -> GlobalNameResult<'a> {
         if let CollectionStatus::Automata { net, automata } = self.status {
-            let curr_stat = self.check_name(name, loc, &automata_cls, &stat)?;
+            let res = self.check_name(name, loc, &automata_cls, &stat)?;
             let net_table = self.names.get_mut(net).unwrap();
-            let automata_table = net_table.names.get_mut(automata).unwrap();
-            if let NetworkName::Automata(ref mut automata_table) = automata_table.class {
-                let (stat, class) = match curr_stat {
-                    CheckNameResult::AutomataNameStatus((curr_stat, class)) => (
-                        NameStatus::next(curr_stat, stat),
-                        AutomataName::next(class, automata_cls),
-                    ),
-                    CheckNameResult::NameStatus(curr_stat) => {
-                        (NameStatus::next(curr_stat, stat), automata_cls)
-                    }
-                };
+            let automata_table = net_table.automata.get_mut(automata).unwrap();
+            let (stat, class) = next_stat_and_class(res, stat, automata_cls);
 
-                automata_table.insert_name(name, loc, class, stat);
-                Ok(self)
-            } else {
-                panic!("`{}` should point to an automata", automata);
-            }
+            automata_table.insert_name(name, loc, class, stat);
+            Ok(self)
         } else {
             panic!("call insert_automata_name outside automata")
         }
@@ -160,7 +147,7 @@ impl<'a> GlobalNameTable<'a> {
 
     fn insert_new_network(mut self, name: &'a str, loc: Loc, stat: NameStatus) -> Self {
         self.status = CollectionStatus::Network(name);
-        self.names.insert(name, GlobalName::new(loc, stat));
+        self.names.insert(name, NetworkNameTable::new(loc, stat));
         self
     }
 
@@ -173,9 +160,8 @@ impl<'a> GlobalNameTable<'a> {
     ) -> GlobalNameResult<'a> {
         self.check_name(automata_name, loc, NameClass::Automata, &stat)?;
         let net_table = self.names.get_mut(net_name).unwrap();
-        let class = NetworkName::Automata(Automata::new());
-        let automata_info = NetworkNameInfo { stat, class };
-        net_table.names.insert(automata_name, automata_info);
+        let automata_table = AutomataNameTable::new();
+        net_table.automata.insert(automata_name, automata_table);
         self.status = CollectionStatus::Automata {
             net: net_name,
             automata: automata_name,
@@ -186,7 +172,7 @@ impl<'a> GlobalNameTable<'a> {
     fn insert_network_name(
         mut self,
         name: &'a str,
-        class: NetworkName<'a>,
+        class: NetworkName,
         loc: Loc,
         stat: NameStatus,
     ) -> GlobalNameResult<'a> {
@@ -243,22 +229,7 @@ impl<'a> GlobalNameTable<'a> {
             new_name_error! {name, NameClass::Network, curr_class, (0, 0), loc}
         } else {
             let net_table = self.names.get(net_name).unwrap();
-            if let Some(prev) = net_table.names.get(name) {
-                let name_cls = NameClass::from_network_name(&prev.class);
-                if name_cls == curr_class {
-                    let stat = NameStatus::check_status(&prev.stat, stat);
-                    match stat {
-                        CheckStatus::Success => Ok(CheckNameResult::NameStatus(prev.stat)),
-                        CheckStatus::Failure => {
-                            new_name_error! {name, name_cls, curr_class, (0, 0), loc}
-                        }
-                    }
-                } else {
-                    new_name_error! {name, name_cls, curr_class, (0, 0), loc}
-                }
-            } else {
-                Ok(CheckNameResult::NameStatus(NameStatus::Unknown))
-            }
+            net_table.check_network_name(name, curr_class, loc, *stat)
         }
     }
 
@@ -271,29 +242,26 @@ impl<'a> GlobalNameTable<'a> {
         curr_class: NameClass,
         stat: &NameStatus,
     ) -> Result<CheckNameResult, NameError<'a>> {
-        self.check_network_name(name, net_name, loc, curr_class, stat)?;
-        let net_table = self.names.get(net_name).unwrap();
-        let automata_table = net_table.names.get(automata_name).unwrap();
-        if let NetworkName::Automata(automata) = &automata_table.class {
-            if let Some(prev) = automata.names.get(name) {
-                let name_cls = NameClass::from_automata_name(&prev.class);
-                if name_cls == curr_class {
-                    let stat = NameStatus::check_status(&prev.stat, stat);
-                    match stat {
-                        CheckStatus::Success => new_automata_name_status! {prev.stat, prev.class},
-                        CheckStatus::Failure => {
-                            new_name_error! {name, name_cls, curr_class, (0, 0), loc}
-                        }
-                    }
-                } else {
-                    new_name_error! {name, name_cls, curr_class, (0, 0), loc}
-                }
-            } else {
-                Ok(CheckNameResult::NameStatus(NameStatus::Unknown))
-            }
+        if net_name == name {
+            new_name_error! {name, NameClass::Network, curr_class, (0, 0), loc}
         } else {
-            panic!("`{}` should index an automata table", automata_name);
+            let net_table = self.names.get(net_name).unwrap();
+            net_table.check_automata_name(name, automata_name, curr_class, loc, *stat)
         }
+    }
+}
+
+fn next_stat_and_class(
+    res: CheckNameResult,
+    stat: NameStatus,
+    cls: AutomataName,
+) -> (NameStatus, AutomataName) {
+    match res {
+        CheckNameResult::AutomataNameStatus((curr_stat, class)) => (
+            NameStatus::next(curr_stat, stat),
+            AutomataName::next(class, cls),
+        ),
+        CheckNameResult::NameStatus(curr_stat) => (NameStatus::next(curr_stat, stat), cls),
     }
 }
 
@@ -311,13 +279,6 @@ impl CheckNameResult {
     }
 }
 
-#[macro_export]
-macro_rules! new_automata_name_status {
-    ($stat:expr, $class:expr) => {
-        Ok(CheckNameResult::AutomataNameStatus(($stat, $class)))
-    };
-}
-
 pub type GlobalNameResult<'a> = Result<GlobalNameTable<'a>, NameError<'a>>;
 
 #[derive(Debug)]
@@ -328,46 +289,168 @@ enum CollectionStatus<'a> {
 }
 
 #[derive(Debug)]
-struct GlobalName<'a> {
+struct NetworkNameTable<'a> {
     loc: Loc,
     stat: NameStatus,
-    names: HashMap<&'a str, NetworkNameInfo<'a>>,
+    names: HashMap<&'a str, NetworkNameInfo>,
+    automata: HashMap<&'a str, AutomataNameTable<'a>>,
 }
 
-impl<'a> GlobalName<'a> {
+impl<'a> NetworkNameTable<'a> {
     fn new(loc: Loc, stat: NameStatus) -> Self {
-        Self {
+        NetworkNameTable {
             loc,
             stat,
             names: HashMap::new(),
+            automata: HashMap::new(),
+        }
+    }
+
+    fn check_network_name<T: Into<NameClass>>(
+        &self,
+        name: &'a str,
+        cls: T,
+        loc: Loc,
+        stat: NameStatus,
+    ) -> Result<CheckNameResult, NameError<'a>> {
+        let cls = cls.into();
+        self.check_network_level_names(name, cls, loc, stat)?;
+        self.check_automata_items(name, cls, loc)
+    }
+
+    fn check_automata_name<T: Into<NameClass>>(
+        &self,
+        name: &'a str,
+        automata_name: &'a str,
+        cls: T,
+        loc: Loc,
+        stat: NameStatus,
+    ) -> Result<CheckNameResult, NameError<'a>> {
+        let cls = cls.into();
+        self.check_network_level_names(name, cls, loc, stat)?;
+        self.check_automata_level_name(name, automata_name, cls, loc, stat)
+    }
+
+    fn check_automata_items(
+        &self,
+        name: &'a str,
+        cls: NameClass,
+        loc: Loc,
+    ) -> Result<CheckNameResult, NameError<'a>> {
+        for automata in self.automata.values() {
+            if let Some(prev) = automata.names.get(name) {
+                let prev_cls: NameClass = (&prev.class).into();
+                return new_name_error! {name, prev_cls, cls, prev.loc, loc};
+            }
+        }
+        Ok(CheckNameResult::NameStatus(NameStatus::Unknown))
+    }
+
+    fn check_automata_level_name(
+        &self,
+        name: &'a str,
+        automata_name: &'a str,
+        cls: NameClass,
+        loc: Loc,
+        stat: NameStatus,
+    ) -> Result<CheckNameResult, NameError<'a>> {
+        let automata_table = self.automata.get(automata_name).unwrap();
+        if let Some(prev) = automata_table.names.get(name) {
+            check_prev_automata_def(name, prev, cls, stat, loc)
+        } else {
+            Ok(CheckNameResult::NameStatus(NameStatus::Unknown))
+        }
+    }
+
+    fn check_network_level_names(
+        &self,
+        name: &'a str,
+        cls: NameClass,
+        loc: Loc,
+        stat: NameStatus,
+    ) -> Result<(), NameError<'a>> {
+        if let Some(prev) = self.names.get(name) {
+            check_previous_definition(name, &prev.class, cls, (0, 0), loc, prev.stat, stat)?;
+            Ok(())
+        } else if let Some(_) = self.automata.get(name) {
+            check_previous_definition(
+                name,
+                NameClass::Automata,
+                cls,
+                (0, 0),
+                loc,
+                NameStatus::Defined,
+                stat,
+            )?;
+            Ok(())
+        } else {
+            Ok(())
         }
     }
 }
 
-#[derive(Debug)]
-struct NetworkNameInfo<'a> {
+fn check_prev_automata_def<'a>(
+    name: &'a str,
+    def: &AutomataInfo,
+    cls: NameClass,
     stat: NameStatus,
-    class: NetworkName<'a>,
+    loc: Loc,
+) -> Result<CheckNameResult, NameError<'a>> {
+    let curr_cls = NameClass::from_automata_name(&def.class);
+    let res = NameStatus::check_status(&def.stat, &stat);
+    match res {
+        CheckStatus::Success => {
+            let next = NameStatus::next(def.stat, stat);
+            Ok(CheckNameResult::AutomataNameStatus((next, def.class)))
+        }
+        CheckStatus::Failure => new_name_error! {name, curr_cls, cls, def.loc, loc},
+    }
+}
+
+fn check_previous_definition<'a, T: Into<NameClass>>(
+    name: &'a str,
+    prev_cls: T,
+    curr_cls: NameClass,
+    prev_loc: Loc,
+    curr_loc: Loc,
+    prev_stat: NameStatus,
+    curr_stat: NameStatus,
+) -> Result<NameStatus, NameError<'a>> {
+    let prev_cls = prev_cls.into();
+    if prev_cls == curr_cls {
+        let res = NameStatus::check_status(&prev_stat, &curr_stat);
+        match res {
+            CheckStatus::Failure => new_name_error! {name, prev_cls, curr_cls, prev_loc, curr_loc},
+            CheckStatus::Success => Ok(NameStatus::next(prev_stat, curr_stat)),
+        }
+    } else {
+        new_name_error! {name, prev_cls, curr_cls, prev_loc, curr_loc}
+    }
 }
 
 #[derive(Debug)]
-enum NetworkName<'a> {
+struct NetworkNameInfo {
+    stat: NameStatus,
+    class: NetworkName,
+}
+
+#[derive(Debug)]
+enum NetworkName {
     Link,
     Event,
     ObsLabel,
     RelLabel,
     UnknowAutomata,
-    Automata(Automata<'a>),
 }
 
 #[derive(Debug)]
-struct Automata<'a> {
+struct AutomataNameTable<'a> {
     names: HashMap<&'a str, AutomataInfo>,
 }
 
-impl<'a> Automata<'a> {
+impl<'a> AutomataNameTable<'a> {
     fn new() -> Self {
-        Self {
+        AutomataNameTable {
             names: HashMap::new(),
         }
     }
@@ -557,7 +640,6 @@ impl NameClass {
     fn from_network_name(cls: &NetworkName) -> Self {
         match cls {
             NetworkName::UnknowAutomata => Self::Automata,
-            NetworkName::Automata(_) => Self::Automata,
             NetworkName::Event => Self::Event,
             NetworkName::Link => Self::Link,
             NetworkName::ObsLabel => Self::ObsLabel,
@@ -573,11 +655,10 @@ impl NameClass {
     }
 }
 
-impl<'a> From<&NetworkName<'a>> for NameClass {
+impl From<&NetworkName> for NameClass {
     fn from(cls: &NetworkName) -> Self {
         match cls {
             NetworkName::UnknowAutomata => Self::Automata,
-            NetworkName::Automata(_) => Self::Automata,
             NetworkName::Event => Self::Event,
             NetworkName::Link => Self::Link,
             NetworkName::ObsLabel => Self::ObsLabel,
