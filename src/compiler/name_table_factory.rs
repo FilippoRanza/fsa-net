@@ -14,7 +14,7 @@ pub fn build_name_table<'a>(code: &Code<'a>) -> Result<GlobalNameTable<'a>, Name
 }
 
 fn collect_network<'a>(nt: GlobalNameTable<'a>, net: &Network<'a>) -> GlobalNameResult<'a> {
-    let nt = nt.add_declare_network(net.name, net.get_location())?;
+    let nt = nt.declare_network(net.name, net.get_location())?;
     let nt = net.params.iter().try_fold(nt, collect_net_param)?;
     Ok(nt.exit_network())
 }
@@ -27,19 +27,19 @@ fn collect_net_param<'a>(
         NetworkParameter::Automata(automata) => collect_automata(nt, automata),
         NetworkParameter::Events(events) => events
             .iter()
-            .try_fold(nt, |nt, ev| nt.add_declare_event(ev, (0, 0))),
+            .try_fold(nt, |nt, ev| nt.declare_event(ev, (0, 0))),
         NetworkParameter::ObserveLabels(labels) => labels
             .iter()
-            .try_fold(nt, |nt, lbl| nt.add_declare_rel_label(lbl, (0, 0))),
+            .try_fold(nt, |nt, lbl| nt.declare_rel_label(lbl, (0, 0))),
         NetworkParameter::RelevanceLabels(labels) => labels
             .iter()
-            .try_fold(nt, |nt, lbl| nt.add_declare_obs_label(lbl, (0, 0))),
-        NetworkParameter::Link(link) => nt.add_declare_link(link.name, link.get_location()),
+            .try_fold(nt, |nt, lbl| nt.declare_obs_label(lbl, (0, 0))),
+        NetworkParameter::Link(link) => nt.declare_link(link.name, link.get_location()),
     }
 }
 
 fn collect_automata<'a>(nt: GlobalNameTable<'a>, automata: &Automata<'a>) -> GlobalNameResult<'a> {
-    let nt = nt.add_declare_automata(automata.name, automata.get_location())?;
+    let nt = nt.declare_automata(automata.name, automata.get_location())?;
     let nt = automata
         .params
         .iter()
@@ -53,13 +53,57 @@ fn collect_automata_param<'a>(
 ) -> GlobalNameResult<'a> {
     match param {
         AutomataParameter::StateDecl(state) => match state {
-            StateDeclaration::Begin(state) => nt.add_declare_begin(state, (0, 0)),
-            StateDeclaration::State(state) => nt.add_declare_state(state, (0, 0)),
+            StateDeclaration::Begin(state) => nt.declare_begin(state, (0, 0)),
+            StateDeclaration::State(state) => nt.declare_state(state, (0, 0)),
         },
-        AutomataParameter::Transition(trans) => {
-            nt.add_declare_transition(trans.name, trans.get_location())
-        }
+        AutomataParameter::Transition(trans) => collect_transition(nt, trans),
     }
+}
+
+fn collect_transition<'a>(
+    nt: GlobalNameTable<'a>,
+    trans: &TransitionDeclaration<'a>,
+) -> GlobalNameResult<'a> {
+    let loc = trans.get_location();
+    let nt = nt.declare_transition(trans.name, loc)?;
+
+    let nt = nt.add_state(trans.source, loc)?;
+    let nt = nt.add_state(trans.destination, loc)?;
+
+    let nt = if let Some(input_event) = &trans.input {
+        collect_event(nt, input_event, loc)?
+    } else {
+        nt
+    };
+
+    let nt = if let Some(obs_label) = &trans.obs_label {
+        nt.add_obs_label(obs_label, loc)?
+    } else {
+        nt
+    };
+
+    let nt = if let Some(rel_label) = &trans.rel_label {
+        nt.add_rel_label(rel_label, loc)?
+    } else {
+        nt
+    };
+
+    if let Some(output_events) = &trans.output {
+        output_events
+            .iter()
+            .try_fold(nt, |nt, ev| collect_event(nt, ev, loc))
+    } else {
+        Ok(nt)
+    }
+}
+
+fn collect_event<'a>(
+    nt: GlobalNameTable<'a>,
+    event: &Event<'a>,
+    loc: (usize, usize),
+) -> GlobalNameResult<'a> {
+    let nt = nt.add_event(&event.name, loc)?;
+    nt.add_link(&event.link, loc)
 }
 
 #[cfg(test)]

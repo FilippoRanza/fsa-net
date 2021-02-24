@@ -205,8 +205,8 @@ pub fn remove_quotes<'a>(quoted_str: &'a str) -> &'a str {
 #[add_location]
 #[derive(DefaultBuilder, Default)]
 pub struct Event<'a> {
-    name: &'a str,
-    link: &'a str,
+    pub name: &'a str,
+    pub link: &'a str,
 }
 
 #[add_location]

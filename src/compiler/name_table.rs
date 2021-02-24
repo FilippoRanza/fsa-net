@@ -1,7 +1,7 @@
 use super::Location;
 use std::collections::HashMap;
 
-use crate::{into_name_error, new_name_error};
+use crate::{into_name_error, new_automata_name_status, new_name_error};
 
 type Loc = (usize, usize);
 
@@ -19,7 +19,7 @@ impl<'a> GlobalNameTable<'a> {
         }
     }
 
-    pub fn add_declare_network(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
+    pub fn declare_network(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
         if let Some(prev) = self.names.get(name) {
             let err = GlobalNameError::new(name, GlobalClassName::Network, prev.loc, loc);
             Err(err)?
@@ -28,7 +28,7 @@ impl<'a> GlobalNameTable<'a> {
         }
     }
 
-    pub fn add_declare_automata(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
+    pub fn declare_automata(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
         if let CollectionStatus::Network(net_name) = self.status {
             self.insert_new_automata(name, net_name, loc, NameStatus::Defined)
         } else {
@@ -36,32 +36,65 @@ impl<'a> GlobalNameTable<'a> {
         }
     }
 
-    pub fn add_declare_link(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
+    pub fn declare_link(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
         self.insert_network_name(name, NetworkName::Link, loc, NameStatus::Defined)
     }
 
-    pub fn add_declare_rel_label(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
+    pub fn declare_rel_label(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
         self.insert_network_name(name, NetworkName::RelLabel, loc, NameStatus::Defined)
     }
 
-    pub fn add_declare_obs_label(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
+    pub fn declare_obs_label(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
         self.insert_network_name(name, NetworkName::ObsLabel, loc, NameStatus::Defined)
     }
 
-    pub fn add_declare_event(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
+    pub fn declare_event(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
         self.insert_network_name(name, NetworkName::Event, loc, NameStatus::Defined)
     }
 
-    pub fn add_declare_begin(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
+    pub fn declare_begin(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
         self.insert_automata_name(name, loc, AutomataName::Begin, NameStatus::Defined)
     }
 
-    pub fn add_declare_state(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
+    pub fn declare_state(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
         self.insert_automata_name(name, loc, AutomataName::State, NameStatus::Defined)
     }
 
-    pub fn add_declare_transition(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
+    pub fn declare_transition(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
         self.insert_automata_name(name, loc, AutomataName::Transition, NameStatus::Defined)
+    }
+
+    pub fn add_network(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
+        Ok(self)
+    }
+
+    pub fn add_automata(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
+        self.insert_network_name(
+            name,
+            NetworkName::UnknowAutomata,
+            loc,
+            NameStatus::Undefined,
+        )
+    }
+
+    pub fn add_link(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
+        self.insert_network_name(name, NetworkName::Link, loc, NameStatus::Undefined)
+    }
+
+    pub fn add_rel_label(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
+        self.insert_network_name(name, NetworkName::RelLabel, loc, NameStatus::Undefined)
+    }
+
+    pub fn add_obs_label(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
+        self.insert_network_name(name, NetworkName::ObsLabel, loc, NameStatus::Undefined)
+    }
+
+    pub fn add_event(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
+        self.insert_network_name(name, NetworkName::Event, loc, NameStatus::Undefined)
+    }
+
+    pub fn add_state(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
+        self.insert_automata_name(name, loc, AutomataName::State, NameStatus::Undefined)
     }
 
     pub fn exit_automata(mut self) -> Self {
@@ -101,11 +134,21 @@ impl<'a> GlobalNameTable<'a> {
         stat: NameStatus,
     ) -> GlobalNameResult<'a> {
         if let CollectionStatus::Automata { net, automata } = self.status {
-            self.check_name(name, loc, &automata_cls)?;
+            let curr_stat = self.check_name(name, loc, &automata_cls, &stat)?;
             let net_table = self.names.get_mut(net).unwrap();
             let automata_table = net_table.names.get_mut(automata).unwrap();
             if let NetworkName::Automata(ref mut automata_table) = automata_table.class {
-                automata_table.insert_name(name, loc, automata_cls, stat);
+                let (stat, class) = match curr_stat {
+                    CheckNameResult::AutomataNameStatus((curr_stat, class)) => (
+                        NameStatus::next(curr_stat, stat),
+                        AutomataName::next(class, automata_cls),
+                    ),
+                    CheckNameResult::NameStatus(curr_stat) => {
+                        (NameStatus::next(curr_stat, stat), automata_cls)
+                    }
+                };
+
+                automata_table.insert_name(name, loc, class, stat);
                 Ok(self)
             } else {
                 panic!("`{}` should point to an automata", automata);
@@ -128,7 +171,7 @@ impl<'a> GlobalNameTable<'a> {
         loc: Loc,
         stat: NameStatus,
     ) -> GlobalNameResult<'a> {
-        self.check_name(automata_name, loc, NameClass::Automata)?;
+        self.check_name(automata_name, loc, NameClass::Automata, &stat)?;
         let net_table = self.names.get_mut(net_name).unwrap();
         let class = NetworkName::Automata(Automata::new());
         let automata_info = NetworkNameInfo { stat, class };
@@ -147,9 +190,11 @@ impl<'a> GlobalNameTable<'a> {
         loc: Loc,
         stat: NameStatus,
     ) -> GlobalNameResult<'a> {
-        self.check_name(name, loc, &class)?;
+        let name_stat = self.check_name(name, loc, &class, &stat)?;
+        let name_stat = name_stat.get_name_status();
         if let CollectionStatus::Network(net_name) = self.status {
             let net_table = self.names.get_mut(net_name).unwrap();
+            let stat = NameStatus::next(name_stat, stat);
             let info = NetworkNameInfo { stat, class };
             net_table.names.insert(name, info);
             Ok(self)
@@ -163,23 +208,26 @@ impl<'a> GlobalNameTable<'a> {
         name: &'a str,
         loc: Loc,
         curr_class: T,
-    ) -> Result<(), NameError<'a>> {
+        stat: &NameStatus,
+    ) -> Result<CheckNameResult, NameError<'a>> {
         let curr_class = curr_class.into();
         match self.status {
             CollectionStatus::Global => self.check_global_name(name, loc),
-            CollectionStatus::Network(net) => self.check_network_name(name, net, loc, curr_class),
+            CollectionStatus::Network(net) => {
+                self.check_network_name(name, net, loc, curr_class, stat)
+            }
             CollectionStatus::Automata { net, automata } => {
-                self.check_automata_name(name, net, automata, loc, curr_class)
+                self.check_automata_name(name, net, automata, loc, curr_class, stat)
             }
         }
     }
 
-    fn check_global_name(&self, name: &'a str, loc: Loc) -> Result<(), NameError<'a>> {
+    fn check_global_name(&self, name: &'a str, loc: Loc) -> Result<CheckNameResult, NameError<'a>> {
         if let Some(prev) = self.names.get(name) {
             let err = GlobalNameError::new(name, GlobalClassName::Network, prev.loc, loc);
             Err(NameError::GlobalNameError(err))
         } else {
-            Ok(())
+            Ok(CheckNameResult::NameStatus(NameStatus::Unknown))
         }
     }
 
@@ -189,16 +237,27 @@ impl<'a> GlobalNameTable<'a> {
         net_name: &'a str,
         loc: Loc,
         curr_class: NameClass,
-    ) -> Result<(), NameError<'a>> {
+        stat: &NameStatus,
+    ) -> Result<CheckNameResult, NameError<'a>> {
         if net_name == name {
             new_name_error! {name, NameClass::Network, curr_class, (0, 0), loc}
         } else {
             let net_table = self.names.get(net_name).unwrap();
             if let Some(prev) = net_table.names.get(name) {
                 let name_cls = NameClass::from_network_name(&prev.class);
-                new_name_error! {name, name_cls, curr_class, (0, 0), loc}
+                if name_cls == curr_class {
+                    let stat = NameStatus::check_status(&prev.stat, stat);
+                    match stat {
+                        CheckStatus::Success => Ok(CheckNameResult::NameStatus(prev.stat)),
+                        CheckStatus::Failure => {
+                            new_name_error! {name, name_cls, curr_class, (0, 0), loc}
+                        }
+                    }
+                } else {
+                    new_name_error! {name, name_cls, curr_class, (0, 0), loc}
+                }
             } else {
-                Ok(())
+                Ok(CheckNameResult::NameStatus(NameStatus::Unknown))
             }
         }
     }
@@ -210,21 +269,53 @@ impl<'a> GlobalNameTable<'a> {
         automata_name: &'a str,
         loc: Loc,
         curr_class: NameClass,
-    ) -> Result<(), NameError<'a>> {
-        self.check_network_name(name, net_name, loc, curr_class)?;
+        stat: &NameStatus,
+    ) -> Result<CheckNameResult, NameError<'a>> {
+        self.check_network_name(name, net_name, loc, curr_class, stat)?;
         let net_table = self.names.get(net_name).unwrap();
         let automata_table = net_table.names.get(automata_name).unwrap();
         if let NetworkName::Automata(automata) = &automata_table.class {
             if let Some(prev) = automata.names.get(name) {
-                let cls = NameClass::from_automata_name(&prev.class);
-                new_name_error! {name, cls, curr_class, prev.loc, loc}
+                let name_cls = NameClass::from_automata_name(&prev.class);
+                if name_cls == curr_class {
+                    let stat = NameStatus::check_status(&prev.stat, stat);
+                    match stat {
+                        CheckStatus::Success => new_automata_name_status! {prev.stat, prev.class},
+                        CheckStatus::Failure => {
+                            new_name_error! {name, name_cls, curr_class, (0, 0), loc}
+                        }
+                    }
+                } else {
+                    new_name_error! {name, name_cls, curr_class, (0, 0), loc}
+                }
             } else {
-                Ok(())
+                Ok(CheckNameResult::NameStatus(NameStatus::Unknown))
             }
         } else {
             panic!("`{}` should index an automata table", automata_name);
         }
     }
+}
+
+enum CheckNameResult {
+    NameStatus(NameStatus),
+    AutomataNameStatus((NameStatus, AutomataName)),
+}
+
+impl CheckNameResult {
+    fn get_name_status(self) -> NameStatus {
+        match self {
+            Self::NameStatus(stat) => stat,
+            Self::AutomataNameStatus(_) => panic!(),
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! new_automata_name_status {
+    ($stat:expr, $class:expr) => {
+        Ok(CheckNameResult::AutomataNameStatus(($stat, $class)))
+    };
 }
 
 pub type GlobalNameResult<'a> = Result<GlobalNameTable<'a>, NameError<'a>>;
@@ -265,6 +356,7 @@ enum NetworkName<'a> {
     Event,
     ObsLabel,
     RelLabel,
+    UnknowAutomata,
     Automata(Automata<'a>),
 }
 
@@ -315,11 +407,21 @@ impl<'a> Automata<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 enum AutomataName {
     State,
     Begin,
     Transition,
+}
+
+impl AutomataName {
+    fn next(prev: Self, curr: Self) -> Self {
+        match (prev, curr) {
+            (Self::Begin, _) => Self::Begin,
+            (_, Self::Begin) => Self::Begin,
+            _ => curr,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -329,17 +431,46 @@ struct AutomataInfo {
     stat: NameStatus,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 enum NameStatus {
     Defined,
+    Used,
     Undefined,
+    Unknown,
+}
+
+impl NameStatus {
+    fn next(curr: Self, incoming: Self) -> Self {
+        match (curr, incoming) {
+            (NameStatus::Unknown, inc) => inc,
+            (NameStatus::Used, _) => NameStatus::Used,
+            (NameStatus::Defined, NameStatus::Undefined) => NameStatus::Used,
+            (NameStatus::Undefined, NameStatus::Defined) => NameStatus::Used,
+            (NameStatus::Undefined, NameStatus::Undefined) => NameStatus::Undefined,
+            (_, NameStatus::Used) => unreachable!(),
+            (NameStatus::Defined, NameStatus::Defined) => unreachable!(),
+            (_, NameStatus::Unknown) => unreachable!(),
+        }
+    }
+
+    fn check_status(curr: &Self, incoming: &Self) -> CheckStatus {
+        match (curr, incoming) {
+            (NameStatus::Defined, NameStatus::Defined) => CheckStatus::Failure,
+            _ => CheckStatus::Success,
+        }
+    }
+}
+
+enum CheckStatus {
+    Success,
+    Failure,
 }
 
 impl<'a> NameStatus {
     fn validate(&self, name: &'a str, loc: Loc) -> Result<(), UndefinedNameError<'a>> {
         match self {
-            Self::Defined => Ok(()),
             Self::Undefined => Err(UndefinedNameError { name, loc }),
+            _ => Ok(()),
         }
     }
 }
@@ -425,6 +556,7 @@ pub enum NameClass {
 impl NameClass {
     fn from_network_name(cls: &NetworkName) -> Self {
         match cls {
+            NetworkName::UnknowAutomata => Self::Automata,
             NetworkName::Automata(_) => Self::Automata,
             NetworkName::Event => Self::Event,
             NetworkName::Link => Self::Link,
@@ -444,6 +576,7 @@ impl NameClass {
 impl<'a> From<&NetworkName<'a>> for NameClass {
     fn from(cls: &NetworkName) -> Self {
         match cls {
+            NetworkName::UnknowAutomata => Self::Automata,
             NetworkName::Automata(_) => Self::Automata,
             NetworkName::Event => Self::Event,
             NetworkName::Link => Self::Link,
@@ -496,12 +629,12 @@ mod test {
     #[test]
     fn test_correct_name() {
         let name_table = GlobalNameTable::new();
-        let name_table = name_table.add_declare_network("netname", (0, 1)).unwrap();
-        let name_table = name_table.add_declare_event("ev", (4, 5)).unwrap();
-        let name_table = name_table.add_declare_link("lk", (6, 7)).unwrap();
-        let name_table = name_table.add_declare_automata("at", (10, 12)).unwrap();
-        let name_table = name_table.add_declare_begin("s1", (13, 15)).unwrap();
-        let name_table = name_table.add_declare_state("s2", (45, 35)).unwrap();
+        let name_table = name_table.declare_network("netname", (0, 1)).unwrap();
+        let name_table = name_table.declare_event("ev", (4, 5)).unwrap();
+        let name_table = name_table.declare_link("lk", (6, 7)).unwrap();
+        let name_table = name_table.declare_automata("at", (10, 12)).unwrap();
+        let name_table = name_table.declare_begin("s1", (13, 15)).unwrap();
+        let name_table = name_table.declare_state("s2", (45, 35)).unwrap();
         let name_table = name_table.exit_automata();
         let _ = name_table.exit_network();
     }
@@ -509,13 +642,13 @@ mod test {
     #[test]
     fn test_ridefined_name() {
         let name_table = GlobalNameTable::new();
-        let name_table = name_table.add_declare_network("netname", (0, 1)).unwrap();
-        let name_table = name_table.add_declare_event("ev", (4, 5)).unwrap();
-        let name_table = name_table.add_declare_link("lk", (6, 7)).unwrap();
-        let name_table = name_table.add_declare_automata("at", (10, 12)).unwrap();
+        let name_table = name_table.declare_network("netname", (0, 1)).unwrap();
+        let name_table = name_table.declare_event("ev", (4, 5)).unwrap();
+        let name_table = name_table.declare_link("lk", (6, 7)).unwrap();
+        let name_table = name_table.declare_automata("at", (10, 12)).unwrap();
         let name_table = name_table.exit_automata();
         let err = name_table
-            .add_declare_link("at", (15, 18))
+            .declare_link("at", (15, 18))
             .expect_err("`at` is defined twice");
         match err {
             NameError::NameRidefinitionError(err) => {
@@ -530,12 +663,12 @@ mod test {
     #[test]
     fn test_multiple_begin_state() {
         let name_table = GlobalNameTable::new();
-        let name_table = name_table.add_declare_network("netname", (0, 1)).unwrap();
-        let name_table = name_table.add_declare_event("ev", (4, 5)).unwrap();
-        let name_table = name_table.add_declare_link("lk", (6, 7)).unwrap();
-        let name_table = name_table.add_declare_automata("at", (10, 12)).unwrap();
-        let name_table = name_table.add_declare_begin("s0", (45, 12)).unwrap();
-        let name_table = name_table.add_declare_begin("s1", (56, 142)).unwrap();
+        let name_table = name_table.declare_network("netname", (0, 1)).unwrap();
+        let name_table = name_table.declare_event("ev", (4, 5)).unwrap();
+        let name_table = name_table.declare_link("lk", (6, 7)).unwrap();
+        let name_table = name_table.declare_automata("at", (10, 12)).unwrap();
+        let name_table = name_table.declare_begin("s0", (45, 12)).unwrap();
+        let name_table = name_table.declare_begin("s1", (56, 142)).unwrap();
 
         let name_table = name_table.exit_automata();
         let name_table = name_table.exit_network();
@@ -560,10 +693,10 @@ mod test {
     #[test]
     fn test_no_begin_state() {
         let name_table = GlobalNameTable::new();
-        let name_table = name_table.add_declare_network("netname", (0, 1)).unwrap();
-        let name_table = name_table.add_declare_event("ev", (4, 5)).unwrap();
-        let name_table = name_table.add_declare_link("lk", (6, 7)).unwrap();
-        let name_table = name_table.add_declare_automata("at", (10, 12)).unwrap();
+        let name_table = name_table.declare_network("netname", (0, 1)).unwrap();
+        let name_table = name_table.declare_event("ev", (4, 5)).unwrap();
+        let name_table = name_table.declare_link("lk", (6, 7)).unwrap();
+        let name_table = name_table.declare_automata("at", (10, 12)).unwrap();
 
         let name_table = name_table.exit_automata();
         let name_table = name_table.exit_network();
@@ -584,15 +717,15 @@ mod test {
     #[test]
     fn test_state_ridefinition() {
         let name_table = GlobalNameTable::new();
-        let name_table = name_table.add_declare_network("netname", (0, 1)).unwrap();
-        let name_table = name_table.add_declare_event("ev", (4, 5)).unwrap();
-        let name_table = name_table.add_declare_link("lk", (6, 7)).unwrap();
-        let name_table = name_table.add_declare_automata("at", (10, 12)).unwrap();
-        let name_table = name_table.add_declare_begin("s0", (45, 12)).unwrap();
-        let name_table = name_table.add_declare_state("s1", (56, 142)).unwrap();
+        let name_table = name_table.declare_network("netname", (0, 1)).unwrap();
+        let name_table = name_table.declare_event("ev", (4, 5)).unwrap();
+        let name_table = name_table.declare_link("lk", (6, 7)).unwrap();
+        let name_table = name_table.declare_automata("at", (10, 12)).unwrap();
+        let name_table = name_table.declare_begin("s0", (45, 12)).unwrap();
+        let name_table = name_table.declare_state("s1", (56, 142)).unwrap();
 
         let err = name_table
-            .add_declare_state("s1", (67, 132))
+            .declare_state("s1", (67, 132))
             .expect_err("State s1 is defined twice");
 
         match err {
