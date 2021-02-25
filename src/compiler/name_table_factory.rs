@@ -30,10 +30,10 @@ fn collect_net_param<'a>(
             .try_fold(nt, |nt, ev| nt.declare_event(ev, (0, 0))),
         NetworkParameter::ObserveLabels(labels) => labels
             .iter()
-            .try_fold(nt, |nt, lbl| nt.declare_rel_label(lbl, (0, 0))),
+            .try_fold(nt, |nt, lbl| nt.declare_obs_label(lbl, (0, 0))),
         NetworkParameter::RelevanceLabels(labels) => labels
             .iter()
-            .try_fold(nt, |nt, lbl| nt.declare_obs_label(lbl, (0, 0))),
+            .try_fold(nt, |nt, lbl| nt.declare_rel_label(lbl, (0, 0))),
         NetworkParameter::Link(link) => nt.declare_link(link.name, link.get_location()),
     }
 }
@@ -145,23 +145,6 @@ mod test {
     }
 
     #[test]
-    fn test_duplicated_automata() {
-        let code = load_code_from_file("ridefined-automata");
-        let ast = parse(&code).expect("`ridefined-automata` should be syntactically correct");
-
-        let err = build_name_table(&ast)
-            .expect_err("`ridefined-automata` should contain semantic errors");
-        match err {
-            NameError::NameRidefinitionError(err) => {
-                assert_eq!(err.name, "A");
-                assert_eq!(err.orig_class, NameClass::Automata);
-                assert_eq!(err.ridef_class, NameClass::Automata);
-            }
-            err => panic!("Expected NameRidefintionError, found: {:?}", err),
-        }
-    }
-
-    #[test]
     fn test_missing_begin_state() {
         let code = load_code_from_file("missing-begin");
         let ast = parse(&code).expect("`missing-begin` should be syntactically correct");
@@ -171,6 +154,53 @@ mod test {
         match err {
             NameError::BeginStateError(BeginStateError::NoBeginState) => {}
             err => panic!("Expected BeginStateError(NoBeginState), found {:?}", err),
+        }
+    }
+
+    #[test]
+    fn test_ridefined_names() {
+        let test_params = [
+            (
+                "ridefined-name",
+                "s1",
+                NameClass::State,
+                NameClass::ObsLabel,
+            ),
+            (
+                "ridefined-automata",
+                "A",
+                NameClass::Automata,
+                NameClass::Automata,
+            ),
+            (
+                "ridefined_network",
+                "Name",
+                NameClass::Network,
+                NameClass::Network,
+            ),
+        ];
+        for (file, name, orig, ridef) in &test_params {
+            run_name_ridefinition_test(file, name, orig, ridef);
+        }
+    }
+
+    fn run_name_ridefinition_test(file: &str, name: &str, orig: &NameClass, ridef: &NameClass) {
+        let code = load_code_from_file(file);
+        let expect_msg = format!("`{}` should be syntactically correct", file);
+        let ast = parse(&code).expect(&expect_msg);
+
+        let expect_msg = format!(
+            "in file `{}` a semantic error is expected: name {} is defined multiple times",
+            file, name
+        );
+        let err = build_name_table(&ast).expect_err(&expect_msg);
+        match err {
+            NameError::NameRidefinitionError(err) => {
+                assert_eq!(err.name, name);
+                assert_eq!(err.orig_class, *orig);
+                assert_eq!(err.ridef_class, *ridef);
+            }
+            err => panic!("Expected NameRidefinitionError, found {:?}", err),
         }
     }
 

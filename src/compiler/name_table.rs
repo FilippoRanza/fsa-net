@@ -1,7 +1,7 @@
 use super::Location;
 use std::collections::HashMap;
 
-use crate::{into_name_error,  new_name_error};
+use crate::{into_name_error, new_name_error};
 
 type Loc = (usize, usize);
 
@@ -20,12 +20,8 @@ impl<'a> GlobalNameTable<'a> {
     }
 
     pub fn declare_network(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
-        if let Some(prev) = self.names.get(name) {
-            let err = GlobalNameError::new(name, GlobalClassName::Network, prev.loc, loc);
-            Err(err)?
-        } else {
-            Ok(self.insert_new_network(name, loc, NameStatus::Defined))
-        }
+        self.check_name(name, loc, NameClass::Network, &NameStatus::Defined)?;
+        Ok(self.insert_new_network(name, loc, NameStatus::Defined))
     }
 
     pub fn declare_automata(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
@@ -198,7 +194,7 @@ impl<'a> GlobalNameTable<'a> {
     ) -> Result<CheckNameResult, NameError<'a>> {
         let curr_class = curr_class.into();
         match self.status {
-            CollectionStatus::Global => self.check_global_name(name, loc),
+            CollectionStatus::Global => self.check_global_name(name, loc, curr_class),
             CollectionStatus::Network(net) => {
                 self.check_network_name(name, net, loc, curr_class, stat)
             }
@@ -208,10 +204,14 @@ impl<'a> GlobalNameTable<'a> {
         }
     }
 
-    fn check_global_name(&self, name: &'a str, loc: Loc) -> Result<CheckNameResult, NameError<'a>> {
+    fn check_global_name(
+        &self,
+        name: &'a str,
+        loc: Loc,
+        cls: NameClass,
+    ) -> Result<CheckNameResult, NameError<'a>> {
         if let Some(prev) = self.names.get(name) {
-            let err = GlobalNameError::new(name, GlobalClassName::Network, prev.loc, loc);
-            Err(NameError::GlobalNameError(err))
+            new_name_error! {name, NameClass::Network, cls, prev.loc, loc}
         } else {
             Ok(CheckNameResult::NameStatus(NameStatus::Unknown))
         }
@@ -560,14 +560,12 @@ impl<'a> NameStatus {
 
 #[derive(Debug)]
 pub enum NameError<'a> {
-    GlobalNameError(GlobalNameError<'a>),
     UndefinedNetwork(UndefinedNetwork<'a>),
     NameRidefinitionError(NameRidefinitionError<'a>),
     BeginStateError(BeginStateError<'a>),
     UndefinedNameError(UndefinedNameError<'a>),
 }
 
-into_name_error! {GlobalNameError}
 into_name_error! {UndefinedNetwork}
 into_name_error! {NameRidefinitionError}
 into_name_error! {BeginStateError}
@@ -583,25 +581,6 @@ pub struct UndefinedNameError<'a> {
 pub enum GlobalClassName {
     Network,
     Request,
-}
-
-#[derive(Debug)]
-pub struct GlobalNameError<'a> {
-    pub name: &'a str,
-    pub class: GlobalClassName,
-    pub orig_loc: Location,
-    pub new_loc: Location,
-}
-
-impl<'a> GlobalNameError<'a> {
-    fn new(name: &'a str, class: GlobalClassName, orig_loc: Loc, new_loc: Loc) -> Self {
-        Self {
-            name,
-            class,
-            orig_loc: orig_loc.into(),
-            new_loc: new_loc.into(),
-        }
-    }
 }
 
 #[derive(Debug)]
