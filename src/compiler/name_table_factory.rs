@@ -34,8 +34,16 @@ fn collect_net_param<'a>(
         NetworkParameter::RelevanceLabels(labels) => labels
             .iter()
             .try_fold(nt, |nt, lbl| nt.declare_rel_label(lbl, (0, 0))),
-        NetworkParameter::Link(link) => nt.declare_link(link.name, link.get_location()),
+        NetworkParameter::Link(link) => collect_link(nt, link),
     }
+}
+
+fn collect_link<'a>(nt: GlobalNameTable<'a>, link: &Link<'a>) -> GlobalNameResult<'a> {
+    let loc = link.get_location();
+    let nt = nt.declare_link(link.name, loc)?;
+
+    let nt = nt.add_automata(link.source, loc)?;
+    nt.add_automata(link.destination, loc)
 }
 
 fn collect_automata<'a>(nt: GlobalNameTable<'a>, automata: &Automata<'a>) -> GlobalNameResult<'a> {

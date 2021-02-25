@@ -63,13 +63,24 @@ impl<'a> GlobalNameTable<'a> {
         Ok(self)
     }
 
-    pub fn add_automata(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
-        self.insert_network_name(
-            name,
-            NetworkName::UnknowAutomata,
-            loc,
-            NameStatus::Undefined,
-        )
+    pub fn add_automata(mut self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
+        if let CollectionStatus::Network(net_name) = self.status {
+            let net_table = self.names.get_mut(net_name).unwrap();
+            if let Some(_) = net_table.automata.get(name) {
+                net_table.names.remove(name);
+                Ok(self)
+            } else {
+                self.check_name(name, loc, NameClass::Automata, &NameStatus::Undefined)?;
+                self.insert_network_name(
+                    name,
+                    NetworkName::UnknowAutomata,
+                    loc,
+                    NameStatus::Undefined,
+                )
+            }
+        } else {
+            panic!("cannot call `add_automata` outside netword")
+        }
     }
 
     pub fn add_link(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
@@ -154,6 +165,10 @@ impl<'a> GlobalNameTable<'a> {
         stat: NameStatus,
     ) -> GlobalNameResult<'a> {
         self.check_name(automata_name, loc, NameClass::Automata, &stat)?;
+        let net_table = self.names.get_mut(net_name).unwrap();
+        if let Some(_) = net_table.names.get(automata_name) {
+            net_table.names.remove(automata_name);
+        }
         let net_table = self.names.get_mut(net_name).unwrap();
         let automata_table = AutomataNameTable::new();
         net_table.automata.insert(automata_name, automata_table);
@@ -313,6 +328,7 @@ impl<'a> NetworkNameTable<'a> {
         stat: NameStatus,
     ) -> Result<CheckNameResult, NameError<'a>> {
         let cls = cls.into();
+        dbg! {name};
         self.check_network_level_names(name, cls, loc, stat)?;
         self.check_automata_items(name, cls, loc)
     }
@@ -615,16 +631,6 @@ pub enum NameClass {
 }
 
 impl NameClass {
-    fn from_network_name(cls: &NetworkName) -> Self {
-        match cls {
-            NetworkName::UnknowAutomata => Self::Automata,
-            NetworkName::Event => Self::Event,
-            NetworkName::Link => Self::Link,
-            NetworkName::ObsLabel => Self::ObsLabel,
-            NetworkName::RelLabel => Self::RelLabel,
-        }
-    }
-
     fn from_automata_name(cls: &AutomataName) -> Self {
         match cls {
             AutomataName::Begin | AutomataName::State => Self::State,
@@ -794,6 +800,61 @@ mod test {
                 assert_eq!(err.ridef_class, NameClass::State);
             }
             err => panic!("expected NameRidefinitionError: found `{:?}`", err),
+        }
+    }
+
+    #[test]
+    fn test_undefined_automata() {
+        let name_table = GlobalNameTable::new();
+        let name_table = name_table.declare_network("net", (0, 1)).unwrap();
+        let name_table = name_table.declare_link("L1", (0, 1)).unwrap();
+        let name_table = name_table.add_automata("A", (10, 10)).unwrap();
+        let name_table = name_table.add_automata("B", (10, 10)).unwrap();
+
+        let name_table = name_table.declare_automata("A", (14, 15)).unwrap();
+
+        let name_table = name_table.exit_automata();
+        let name_table = name_table.exit_network();
+
+        let err = name_table
+            .validate()
+            .expect_err("Automata `b` is not defined");
+        match err {
+            NameError::UndefinedNameError(err) => {
+                assert_eq!(err.name, "B");
+            }
+            _ => panic!("expected UndefinedNameError, found {:?}", err),
+        }
+    }
+
+    #[test]
+    fn test_automata_name_ridefinition() {
+        let name_table = GlobalNameTable::new();
+        let name_table = name_table.declare_network("net", (0, 1)).unwrap();
+        let name_table = name_table.declare_link("L1", (0, 1)).unwrap();
+        let name_table = name_table.add_event("A", (67, 23)).unwrap();
+        let err = name_table
+            .add_automata("A", (10, 10))
+            .expect_err("Name `A` is found as Event");
+        match err {
+            NameError::NameRidefinitionError(err) => {
+                assert_eq!(err.name, "A");
+            }
+            _ => panic!("expected NameRidefinitionError, found {:?}", err),
+        }
+
+        let name_table = GlobalNameTable::new();
+        let name_table = name_table.declare_network("net", (0, 1)).unwrap();
+        let name_table = name_table.declare_link("L1", (0, 1)).unwrap();
+        let name_table = name_table.add_event("A", (67, 23)).unwrap();
+        let err = name_table
+            .declare_automata("A", (10, 10))
+            .expect_err("Name `A` is found as Event");
+        match err {
+            NameError::NameRidefinitionError(err) => {
+                assert_eq!(err.name, "A");
+            }
+            _ => panic!("expected NameRidefinitionError, found {:?}", err),
         }
     }
 }
