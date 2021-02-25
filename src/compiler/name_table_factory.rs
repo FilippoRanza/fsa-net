@@ -186,10 +186,43 @@ mod test {
                 NameClass::Network,
                 NameClass::Network,
             ),
+            ("ridefined-event", "A", NameClass::Event, NameClass::Automata),
+            ("ridefined-automata2", "A", NameClass::Automata, NameClass::Event)
         ];
         for (file, name, orig, ridef) in &test_params {
             run_name_ridefinition_test(file, name, orig, ridef);
         }
+    }
+
+    #[test]
+    fn test_undefined_names() {
+        let test_params = [
+            ("undefined-automata", "B")
+        ];
+        for (file, name) in &test_params {
+            run_undefined_name_test(file, name);
+        }
+
+    }
+
+    fn run_undefined_name_test(file: &str, name: &str) {
+        let code = load_code_from_file(file);
+        let expect_msg = format!("`{}` should be syntactically correct", file);
+        let ast = parse(&code).expect(&expect_msg);
+
+        let expect_msg = format!(
+            "in file `{}` a semantic error is expected: name {} is undefined",
+            file, name
+        );
+        let err = build_name_table(&ast).expect_err(&expect_msg);
+        match err {
+            NameError::UndefinedNameError(err) => {
+                assert_eq!(err.name, name);
+            }
+            err => panic!("Expected UndefinedNameError, found {:?}", err),
+        }
+        
+
     }
 
     fn run_name_ridefinition_test(file: &str, name: &str, orig: &NameClass, ridef: &NameClass) {

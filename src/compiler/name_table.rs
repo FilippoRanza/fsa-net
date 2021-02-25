@@ -328,7 +328,6 @@ impl<'a> NetworkNameTable<'a> {
         stat: NameStatus,
     ) -> Result<CheckNameResult, NameError<'a>> {
         let cls = cls.into();
-        dbg! {name};
         self.check_network_level_names(name, cls, loc, stat)?;
         self.check_automata_items(name, cls, loc)
     }
@@ -588,8 +587,8 @@ into_name_error! {UndefinedNameError}
 
 #[derive(Debug)]
 pub struct UndefinedNameError<'a> {
-    name: &'a str,
-    loc: Loc,
+    pub name: &'a str,
+    pub loc: Loc,
 }
 
 #[derive(Debug, PartialEq)]

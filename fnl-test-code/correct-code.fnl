@@ -1,5 +1,9 @@
 
 network TestNetwork {
+
+    link L1 A B
+    link L2 B A
+
     automata A {
         begin a1
         state a2
@@ -37,6 +41,8 @@ network OtherNetwork {
         trans t2 a2 a3
         trans t3 a3 a1
     }
+    
+    link L1 A B
 
     automata B {
         begin a1
@@ -47,6 +53,8 @@ network OtherNetwork {
         trans t2 a2 a3
         trans t3 a3 a1
     }
+
+    link L2 B A
 }
 
 request OtherNetwork {
