@@ -1,4 +1,3 @@
-use super::Location;
 use std::collections::HashMap;
 
 use crate::{into_name_error, new_name_error};
