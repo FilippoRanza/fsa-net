@@ -42,7 +42,6 @@ impl<'a> RequestTable<'a> {
             }
         })
     }
-
 }
 
 pub fn convert_command<'a>(cmd: &Command<'a>) -> Request<'a> {

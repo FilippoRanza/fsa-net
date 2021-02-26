@@ -267,9 +267,7 @@ impl<'a> GlobalNameTable<'a> {
             CollectionStatus::Automata { net, automata } => {
                 self.check_automata_name(name, net, automata, loc, curr_class, stat)
             }
-            CollectionStatus::Request(_) => {
-                Ok(CheckNameResult::NameStatus(NameStatus::Unknown))
-            }
+            CollectionStatus::Request(_) => Ok(CheckNameResult::NameStatus(NameStatus::Unknown)),
         }
     }
 
@@ -320,16 +318,23 @@ impl<'a> GlobalNameTable<'a> {
     }
 }
 
-
-fn validate_labels<'b, 'a: 'b>(table: &NetworkNameTable<'a>, labels: impl Iterator<Item=&'b Vec<&'a str>>, class: NameClass) -> Result<(), NameError<'a>> {
+fn validate_labels<'b, 'a: 'b>(
+    table: &NetworkNameTable<'a>,
+    labels: impl Iterator<Item = &'b Vec<&'a str>>,
+    class: NameClass,
+) -> Result<(), NameError<'a>> {
     for lbls in labels {
         for lbl in lbls {
             if let Some(cls) = table.get_name_class(lbl) {
                 if cls != class {
-                    return Err(MismatchedType {name: lbl, orig: cls, curr: class})?;
+                    return Err(MismatchedType {
+                        name: lbl,
+                        orig: cls,
+                        curr: class,
+                    })?;
                 }
             } else {
-                return Err(UndefinedLabel{name: lbl, class})?;
+                return Err(UndefinedLabel { name: lbl, class })?;
             }
         }
     }
@@ -478,20 +483,18 @@ impl<'a> NetworkNameTable<'a> {
     fn get_name_class(&self, name: &str) -> Option<NameClass> {
         if let Some(def) = self.names.get(name) {
             Some((&def.class).into())
-        } else if let Some(_) = self.automata.get(name){
+        } else if let Some(_) = self.automata.get(name) {
             Some(NameClass::Automata)
         } else {
             for automata in self.automata.values() {
                 let res = automata.get_name_class(name);
                 if res.is_some() {
-                    return res
+                    return res;
                 }
             }
             None
         }
     }
-
-
 }
 
 fn check_prev_automata_def<'a>(
@@ -678,7 +681,7 @@ pub enum NameError<'a> {
     BeginStateError(BeginStateError<'a>),
     UndefinedNameError(UndefinedNameError<'a>),
     UndefinedLabel(UndefinedLabel<'a>),
-    MismatchedType(MismatchedType<'a>)
+    MismatchedType(MismatchedType<'a>),
 }
 
 into_name_error! {UndefinedNetwork}
@@ -688,20 +691,18 @@ into_name_error! {UndefinedNameError}
 into_name_error! {UndefinedLabel}
 into_name_error! {MismatchedType}
 
-
 #[derive(Debug)]
 pub struct UndefinedLabel<'a> {
     name: &'a str,
-    class: NameClass
+    class: NameClass,
 }
 
 #[derive(Debug)]
 pub struct MismatchedType<'a> {
     name: &'a str,
     orig: NameClass,
-    curr: NameClass
+    curr: NameClass,
 }
-
 
 #[derive(Debug)]
 pub struct UndefinedNameError<'a> {
