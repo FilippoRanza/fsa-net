@@ -186,8 +186,18 @@ mod test {
                 NameClass::Network,
                 NameClass::Network,
             ),
-            ("ridefined-event", "A", NameClass::Event, NameClass::Automata),
-            ("ridefined-automata2", "A", NameClass::Automata, NameClass::Event)
+            (
+                "ridefined-event",
+                "A",
+                NameClass::Event,
+                NameClass::Automata,
+            ),
+            (
+                "ridefined-automata2",
+                "A",
+                NameClass::Automata,
+                NameClass::Event,
+            ),
         ];
         for (file, name, orig, ridef) in &test_params {
             run_name_ridefinition_test(file, name, orig, ridef);
@@ -196,13 +206,10 @@ mod test {
 
     #[test]
     fn test_undefined_names() {
-        let test_params = [
-            ("undefined-automata", "B")
-        ];
+        let test_params = [("undefined-automata", "B")];
         for (file, name) in &test_params {
             run_undefined_name_test(file, name);
         }
-
     }
 
     fn run_undefined_name_test(file: &str, name: &str) {
@@ -221,8 +228,6 @@ mod test {
             }
             err => panic!("Expected UndefinedNameError, found {:?}", err),
         }
-        
-
     }
 
     fn run_name_ridefinition_test(file: &str, name: &str, orig: &NameClass, ridef: &NameClass) {

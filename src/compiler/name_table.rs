@@ -864,15 +864,16 @@ mod test {
         }
     }
 
-
     #[test]
     fn test_automata_name_riusage() {
         let name_table = GlobalNameTable::new();
         let name_table = name_table.declare_network("net", (0, 1)).unwrap();
         let name_table = name_table.declare_link("L1", (0, 1)).unwrap();
         let name_table = name_table.add_automata("A", (67, 12)).unwrap();
-        let err = name_table.add_event("A", (67, 23)) .expect_err("Name `A` is found as Automata");
-        
+        let err = name_table
+            .add_event("A", (67, 23))
+            .expect_err("Name `A` is found as Automata");
+
         match err {
             NameError::NameRidefinitionError(err) => {
                 assert_eq!(err.name, "A");
@@ -889,8 +890,10 @@ mod test {
         let name_table = name_table.declare_network("net", (0, 1)).unwrap();
         let name_table = name_table.declare_link("L1", (0, 1)).unwrap();
         let name_table = name_table.declare_automata("A", (67, 12)).unwrap();
-        let err = name_table.add_event("A", (67, 23)) .expect_err("Name `A` is Declared as Automata");
-        
+        let err = name_table
+            .add_event("A", (67, 23))
+            .expect_err("Name `A` is Declared as Automata");
+
         match err {
             NameError::NameRidefinitionError(err) => {
                 assert_eq!(err.name, "A");
@@ -900,9 +903,4 @@ mod test {
             _ => panic!("expected NameRidefinitionError, found {:?}", err),
         }
     }
-
-
-
-
-
 }
