@@ -233,11 +233,11 @@ pub enum Command<'a> {
 #[add_location]
 #[derive(DefaultBuilder)]
 pub struct LinspaceCommand<'a> {
-    name_list: Vec<&'a str>,
+    pub name_list: Vec<&'a str>,
 }
 
 #[add_location]
 #[derive(DefaultBuilder)]
 pub struct DiagnosisCommand<'a> {
-    name_list: Vec<&'a str>,
+    pub name_list: Vec<&'a str>,
 }

@@ -1,4 +1,5 @@
 use super::name_table::*;
+use super::request_table::convert_command;
 
 use fsa_net_parser::syntax_tree::*;
 use fsa_net_parser::Code;
@@ -14,7 +15,14 @@ pub fn build_name_table<'a>(code: &Code<'a>) -> Result<GlobalNameTable<'a>, Name
 }
 
 fn collect_request<'a>(nt: GlobalNameTable<'a>, req: &Request<'a>) -> GlobalNameResult<'a> {
-    nt.add_network(req.name, req.get_location())
+    let nt = nt.add_network(req.name, req.get_location())?;
+    let nt = req.list.iter().try_fold(nt, collect_command)?;
+    Ok(nt.exit_request())
+}
+
+fn collect_command<'a>(nt: GlobalNameTable<'a>, cmd: &Command<'a>) -> GlobalNameResult<'a> {
+    let req = convert_command(cmd);
+    nt.add_request(req)
 }
 
 fn collect_network<'a>(nt: GlobalNameTable<'a>, net: &Network<'a>) -> GlobalNameResult<'a> {

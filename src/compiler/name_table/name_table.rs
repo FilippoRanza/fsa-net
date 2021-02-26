@@ -2,12 +2,13 @@ use std::collections::HashMap;
 
 use crate::{into_name_error, new_name_error};
 
-type Loc = (usize, usize);
+use super::request_table::{Request, RequestTable};
+use super::Loc;
 
 #[derive(Debug)]
 pub struct GlobalNameTable<'a> {
     networks: HashMap<&'a str, NetworkNameTable<'a>>,
-    requests: HashMap<&'a str, RequestTable>,
+    requests: HashMap<&'a str, RequestTable<'a>>,
     status: CollectionStatus<'a>,
 }
 
@@ -63,11 +64,27 @@ impl<'a> GlobalNameTable<'a> {
 
     pub fn add_network(mut self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
         if let Some(prev) = self.requests.get(name) {
-            new_name_error! {name, NameClass::Request, NameClass::Request, prev.loc, loc}
+            new_name_error! {name, NameClass::Request, NameClass::Request, prev.get_location(), loc}
         } else {
             self.requests.insert(name, RequestTable::new(loc));
+            self.status = CollectionStatus::Request(name);
             Ok(self)
         }
+    }
+
+    pub fn add_request(mut self, req: Request<'a>) -> GlobalNameResult<'a> {
+        if let CollectionStatus::Request(net_name) = self.status {
+            let req_table = self.requests.get_mut(net_name).unwrap();
+            req_table.add_request(req);
+            Ok(self)
+        } else {
+            panic!("call `add_request` in wrong status")
+        }
+    }
+
+    pub fn exit_request(mut self) -> Self {
+        self.status = CollectionStatus::Global;
+        self
     }
 
     pub fn add_automata(mut self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
@@ -147,14 +164,23 @@ impl<'a> GlobalNameTable<'a> {
             .requests
             .iter()
             .filter(|(k, _)| !self.networks.contains_key(*k))
-            .map(|(k, v)| (*k, v.loc))
+            .map(|(k, v)| (*k, v.get_location()))
             .collect();
         if names.len() > 0 {
             let err = UndefinedNetwork { names };
             Err(NameError::UndefinedNetwork(err))
         } else {
-            Ok(self)
+            self.validate_request_labels()
         }
+    }
+
+    fn validate_request_labels(self) -> GlobalNameResult<'a> {
+        for (net_name, req) in self.requests.iter() {
+            let net_table = self.networks.get(net_name).unwrap();
+            validate_labels(net_table, req.get_linspace_labels(), NameClass::ObsLabel)?;
+            validate_labels(net_table, req.get_diagnosis_labels(), NameClass::RelLabel)?;
+        }
+        Ok(self)
     }
 
     fn insert_automata_name(
@@ -241,6 +267,9 @@ impl<'a> GlobalNameTable<'a> {
             CollectionStatus::Automata { net, automata } => {
                 self.check_automata_name(name, net, automata, loc, curr_class, stat)
             }
+            CollectionStatus::Request(_) => {
+                Ok(CheckNameResult::NameStatus(NameStatus::Unknown))
+            }
         }
     }
 
@@ -291,6 +320,23 @@ impl<'a> GlobalNameTable<'a> {
     }
 }
 
+
+fn validate_labels<'b, 'a: 'b>(table: &NetworkNameTable<'a>, labels: impl Iterator<Item=&'b Vec<&'a str>>, class: NameClass) -> Result<(), NameError<'a>> {
+    for lbls in labels {
+        for lbl in lbls {
+            if let Some(cls) = table.get_name_class(lbl) {
+                if cls != class {
+                    return Err(MismatchedType {name: lbl, orig: cls, curr: class})?;
+                }
+            } else {
+                return Err(UndefinedLabel{name: lbl, class})?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
 fn next_stat_and_class(
     res: CheckNameResult,
     stat: NameStatus,
@@ -324,6 +370,7 @@ pub type GlobalNameResult<'a> = Result<GlobalNameTable<'a>, NameError<'a>>;
 #[derive(Debug)]
 enum CollectionStatus<'a> {
     Network(&'a str),
+    Request(&'a str),
     Automata { net: &'a str, automata: &'a str },
     Global,
 }
@@ -427,6 +474,24 @@ impl<'a> NetworkNameTable<'a> {
             Ok(())
         }
     }
+
+    fn get_name_class(&self, name: &str) -> Option<NameClass> {
+        if let Some(def) = self.names.get(name) {
+            Some((&def.class).into())
+        } else if let Some(_) = self.automata.get(name){
+            Some(NameClass::Automata)
+        } else {
+            for automata in self.automata.values() {
+                let res = automata.get_name_class(name);
+                if res.is_some() {
+                    return res
+                }
+            }
+            None
+        }
+    }
+
+
 }
 
 fn check_prev_automata_def<'a>(
@@ -492,6 +557,14 @@ impl<'a> AutomataNameTable<'a> {
     fn new() -> Self {
         AutomataNameTable {
             names: HashMap::new(),
+        }
+    }
+
+    fn get_name_class(&self, name: &str) -> Option<NameClass> {
+        if let Some(def) = self.names.get(name) {
+            Some((&def.class).into())
+        } else {
+            None
         }
     }
 
@@ -604,12 +677,31 @@ pub enum NameError<'a> {
     NameRidefinitionError(NameRidefinitionError<'a>),
     BeginStateError(BeginStateError<'a>),
     UndefinedNameError(UndefinedNameError<'a>),
+    UndefinedLabel(UndefinedLabel<'a>),
+    MismatchedType(MismatchedType<'a>)
 }
 
 into_name_error! {UndefinedNetwork}
 into_name_error! {NameRidefinitionError}
 into_name_error! {BeginStateError}
 into_name_error! {UndefinedNameError}
+into_name_error! {UndefinedLabel}
+into_name_error! {MismatchedType}
+
+
+#[derive(Debug)]
+pub struct UndefinedLabel<'a> {
+    name: &'a str,
+    class: NameClass
+}
+
+#[derive(Debug)]
+pub struct MismatchedType<'a> {
+    name: &'a str,
+    orig: NameClass,
+    curr: NameClass
+}
+
 
 #[derive(Debug)]
 pub struct UndefinedNameError<'a> {
@@ -680,22 +772,6 @@ impl From<&AutomataName> for NameClass {
     }
 }
 
-#[derive(Debug)]
-struct RequestTable{
-    loc: Loc
-}
-
-impl RequestTable {
-    fn new(loc: Loc) -> Self {
-        Self {
-            loc
-        }
-    }
-}
-
-
-
-
 #[macro_export]
 macro_rules! new_name_error {
     ($name:expr, $orig_cls:expr, $ridef_cls:expr, $orig_loc:expr, $ridef_loc:expr) => {{
@@ -740,24 +816,25 @@ mod test {
         let name_table = name_table.exit_network();
         let name_table = name_table.add_network("netname", (45, 123)).unwrap();
 
-        name_table.validate().expect("This network is correctly defined");
-
+        name_table
+            .validate()
+            .expect("This network is correctly defined");
     }
-
 
     #[test]
     fn test_missing_network() {
         let name_table = GlobalNameTable::new();
         let name_table = name_table.add_network("net", (0, 1)).unwrap();
-        let err = name_table.validate().expect_err("`net` is not a defined network");
+        let err = name_table
+            .validate()
+            .expect_err("`net` is not a defined network");
         match err {
             NameError::UndefinedNetwork(err) => {
                 assert_eq!(err.names, vec![("net", (0, 1))])
-            },
-            _ => panic!("expected UndefinedNetwork, found: {:?}", err)
+            }
+            _ => panic!("expected UndefinedNetwork, found: {:?}", err),
         }
     }
-
 
     #[test]
     fn test_ridefined_name() {
