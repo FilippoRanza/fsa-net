@@ -6,14 +6,14 @@ type Loc = (usize, usize);
 
 #[derive(Debug)]
 pub struct GlobalNameTable<'a> {
-    names: HashMap<&'a str, NetworkNameTable<'a>>,
+    networks: HashMap<&'a str, NetworkNameTable<'a>>,
     status: CollectionStatus<'a>,
 }
 
 impl<'a> GlobalNameTable<'a> {
     pub fn new() -> Self {
         Self {
-            names: HashMap::new(),
+            networks: HashMap::new(),
             status: CollectionStatus::Global,
         }
     }
@@ -65,7 +65,7 @@ impl<'a> GlobalNameTable<'a> {
 
     pub fn add_automata(mut self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
         if let CollectionStatus::Network(net_name) = self.status {
-            let net_table = self.names.get_mut(net_name).unwrap();
+            let net_table = self.networks.get_mut(net_name).unwrap();
             if let Some(_) = net_table.automata.get(name) {
                 net_table.names.remove(name);
                 Ok(self)
@@ -118,7 +118,7 @@ impl<'a> GlobalNameTable<'a> {
     }
 
     pub fn validate(self) -> GlobalNameResult<'a> {
-        for (net_name, table) in self.names.iter() {
+        for (net_name, table) in self.networks.iter() {
             table.stat.validate(net_name, table.loc)?;
             for (name, item) in table.names.iter() {
                 item.stat.validate(name, (0, 0))?;
@@ -140,7 +140,7 @@ impl<'a> GlobalNameTable<'a> {
     ) -> GlobalNameResult<'a> {
         if let CollectionStatus::Automata { net, automata } = self.status {
             let res = self.check_name(name, loc, &automata_cls, &stat)?;
-            let net_table = self.names.get_mut(net).unwrap();
+            let net_table = self.networks.get_mut(net).unwrap();
             let automata_table = net_table.automata.get_mut(automata).unwrap();
             let (stat, class) = next_stat_and_class(res, stat, automata_cls);
 
@@ -153,7 +153,7 @@ impl<'a> GlobalNameTable<'a> {
 
     fn insert_new_network(mut self, name: &'a str, loc: Loc, stat: NameStatus) -> Self {
         self.status = CollectionStatus::Network(name);
-        self.names.insert(name, NetworkNameTable::new(loc, stat));
+        self.networks.insert(name, NetworkNameTable::new(loc, stat));
         self
     }
 
@@ -165,11 +165,11 @@ impl<'a> GlobalNameTable<'a> {
         stat: NameStatus,
     ) -> GlobalNameResult<'a> {
         self.check_name(automata_name, loc, NameClass::Automata, &stat)?;
-        let net_table = self.names.get_mut(net_name).unwrap();
+        let net_table = self.networks.get_mut(net_name).unwrap();
         if let Some(_) = net_table.names.get(automata_name) {
             net_table.names.remove(automata_name);
         }
-        let net_table = self.names.get_mut(net_name).unwrap();
+        let net_table = self.networks.get_mut(net_name).unwrap();
         let automata_table = AutomataNameTable::new();
         net_table.automata.insert(automata_name, automata_table);
         self.status = CollectionStatus::Automata {
@@ -189,7 +189,7 @@ impl<'a> GlobalNameTable<'a> {
         let name_stat = self.check_name(name, loc, &class, &stat)?;
         let name_stat = name_stat.get_name_status();
         if let CollectionStatus::Network(net_name) = self.status {
-            let net_table = self.names.get_mut(net_name).unwrap();
+            let net_table = self.networks.get_mut(net_name).unwrap();
             let stat = NameStatus::next(name_stat, stat);
             let info = NetworkNameInfo { stat, class };
             net_table.names.insert(name, info);
@@ -224,7 +224,7 @@ impl<'a> GlobalNameTable<'a> {
         loc: Loc,
         cls: NameClass,
     ) -> Result<CheckNameResult, NameError<'a>> {
-        if let Some(prev) = self.names.get(name) {
+        if let Some(prev) = self.networks.get(name) {
             new_name_error! {name, NameClass::Network, cls, prev.loc, loc}
         } else {
             Ok(CheckNameResult::NameStatus(NameStatus::Unknown))
@@ -242,7 +242,7 @@ impl<'a> GlobalNameTable<'a> {
         if net_name == name {
             new_name_error! {name, NameClass::Network, curr_class, (0, 0), loc}
         } else {
-            let net_table = self.names.get(net_name).unwrap();
+            let net_table = self.networks.get(net_name).unwrap();
             net_table.check_network_name(name, curr_class, loc, *stat)
         }
     }
@@ -259,7 +259,7 @@ impl<'a> GlobalNameTable<'a> {
         if net_name == name {
             new_name_error! {name, NameClass::Network, curr_class, (0, 0), loc}
         } else {
-            let net_table = self.names.get(net_name).unwrap();
+            let net_table = self.networks.get(net_name).unwrap();
             net_table.check_automata_name(name, automata_name, curr_class, loc, *stat)
         }
     }
