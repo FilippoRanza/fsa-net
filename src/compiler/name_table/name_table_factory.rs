@@ -7,10 +7,14 @@ pub fn build_name_table<'a>(code: &Code<'a>) -> Result<GlobalNameTable<'a>, Name
     let name_table = GlobalNameTable::new();
     let name_table = code.iter().try_fold(name_table, |nt, curr| match curr {
         Block::Network(net) => collect_network(nt, net),
-        Block::Request(_req) => Ok(nt),
+        Block::Request(req) => collect_request(nt, req),
     })?;
 
     name_table.validate()
+}
+
+fn collect_request<'a>(nt: GlobalNameTable<'a>, req: &Request<'a>) -> GlobalNameResult<'a> {
+    nt.add_network(req.name, req.get_location())
 }
 
 fn collect_network<'a>(nt: GlobalNameTable<'a>, net: &Network<'a>) -> GlobalNameResult<'a> {

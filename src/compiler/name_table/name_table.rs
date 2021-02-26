@@ -7,6 +7,7 @@ type Loc = (usize, usize);
 #[derive(Debug)]
 pub struct GlobalNameTable<'a> {
     networks: HashMap<&'a str, NetworkNameTable<'a>>,
+    requests: HashMap<&'a str, RequestTable>,
     status: CollectionStatus<'a>,
 }
 
@@ -14,6 +15,7 @@ impl<'a> GlobalNameTable<'a> {
     pub fn new() -> Self {
         Self {
             networks: HashMap::new(),
+            requests: HashMap::new(),
             status: CollectionStatus::Global,
         }
     }
@@ -59,8 +61,13 @@ impl<'a> GlobalNameTable<'a> {
         self.insert_automata_name(name, loc, AutomataName::Transition, NameStatus::Defined)
     }
 
-    pub fn add_network(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
-        Ok(self)
+    pub fn add_network(mut self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
+        if let Some(prev) = self.requests.get(name) {
+            new_name_error! {name, NameClass::Request, NameClass::Request, prev.loc, loc}
+        } else {
+            self.requests.insert(name, RequestTable::new(loc));
+            Ok(self)
+        }
     }
 
     pub fn add_automata(mut self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
@@ -118,6 +125,10 @@ impl<'a> GlobalNameTable<'a> {
     }
 
     pub fn validate(self) -> GlobalNameResult<'a> {
+        self.validate_network()?.validate_requests()
+    }
+
+    fn validate_network(self) -> GlobalNameResult<'a> {
         for (net_name, table) in self.networks.iter() {
             table.stat.validate(net_name, table.loc)?;
             for (name, item) in table.names.iter() {
@@ -129,6 +140,21 @@ impl<'a> GlobalNameTable<'a> {
         }
 
         Ok(self)
+    }
+
+    fn validate_requests(self) -> GlobalNameResult<'a> {
+        let names: Vec<(&'a str, Loc)> = self
+            .requests
+            .iter()
+            .filter(|(k, _)| !self.networks.contains_key(*k))
+            .map(|(k, v)| (*k, v.loc))
+            .collect();
+        if names.len() > 0 {
+            let err = UndefinedNetwork { names };
+            Err(NameError::UndefinedNetwork(err))
+        } else {
+            Ok(self)
+        }
     }
 
     fn insert_automata_name(
@@ -591,12 +617,6 @@ pub struct UndefinedNameError<'a> {
     pub loc: Loc,
 }
 
-#[derive(Debug, PartialEq)]
-pub enum GlobalClassName {
-    Network,
-    Request,
-}
-
 #[derive(Debug)]
 pub struct UndefinedNetwork<'a> {
     pub names: Vec<(&'a str, Loc)>,
@@ -620,6 +640,7 @@ pub enum BeginStateError<'a> {
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum NameClass {
     Network,
+    Request,
     Automata,
     Link,
     Event,
@@ -658,6 +679,22 @@ impl From<&AutomataName> for NameClass {
         }
     }
 }
+
+#[derive(Debug)]
+struct RequestTable{
+    loc: Loc
+}
+
+impl RequestTable {
+    fn new(loc: Loc) -> Self {
+        Self {
+            loc
+        }
+    }
+}
+
+
+
 
 #[macro_export]
 macro_rules! new_name_error {
@@ -700,8 +737,27 @@ mod test {
         let name_table = name_table.declare_begin("s1", (13, 15)).unwrap();
         let name_table = name_table.declare_state("s2", (45, 35)).unwrap();
         let name_table = name_table.exit_automata();
-        let _ = name_table.exit_network();
+        let name_table = name_table.exit_network();
+        let name_table = name_table.add_network("netname", (45, 123)).unwrap();
+
+        name_table.validate().expect("This network is correctly defined");
+
     }
+
+
+    #[test]
+    fn test_missing_network() {
+        let name_table = GlobalNameTable::new();
+        let name_table = name_table.add_network("net", (0, 1)).unwrap();
+        let err = name_table.validate().expect_err("`net` is not a defined network");
+        match err {
+            NameError::UndefinedNetwork(err) => {
+                assert_eq!(err.names, vec![("net", (0, 1))])
+            },
+            _ => panic!("expected UndefinedNetwork, found: {:?}", err)
+        }
+    }
+
 
     #[test]
     fn test_ridefined_name() {
