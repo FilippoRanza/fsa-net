@@ -1,5 +1,6 @@
 use super::name_table::*;
 use super::request_table::convert_command;
+use super::name_error::*;
 
 use fsa_net_parser::syntax_tree::*;
 use fsa_net_parser::Code;
@@ -131,6 +132,7 @@ fn collect_event<'a>(
 #[cfg(test)]
 mod test {
 
+    use super::super::name_class::NameClass;
     use super::*;
     use fsa_net_parser::parse;
 
