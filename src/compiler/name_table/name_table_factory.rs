@@ -156,7 +156,12 @@ mod test {
         let err =
             build_name_table(&ast).expect_err("`duplicate-begin` should contain semantic errors");
         match err {
-            NameError::BeginStateError(BeginStateError::MultipleBeginState(states)) => {
+            NameError::BeginStateError(BeginStateError {
+                name,
+                loc: _loc,
+                class: BeginStateErrorClass::MultipleBeginState(states),
+            }) => {
+                assert_eq!(name, "A");
                 assert_eq!(states.len(), 2);
                 assert!(states.contains(&"s0"));
                 assert!(states.contains(&"s1"));
@@ -176,7 +181,13 @@ mod test {
         let err =
             build_name_table(&ast).expect_err("`missing-begin` should contain semantic errors");
         match err {
-            NameError::BeginStateError(BeginStateError::NoBeginState) => {}
+            NameError::BeginStateError(BeginStateError {
+                name,
+                loc: _loc,
+                class: BeginStateErrorClass::NoBeginState,
+            }) => {
+                assert_eq!(name, "A");
+            }
             err => panic!("Expected BeginStateError(NoBeginState), found {:?}", err),
         }
     }

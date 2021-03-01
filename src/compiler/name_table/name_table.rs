@@ -224,7 +224,7 @@ impl<'a> GlobalNameTable<'a> {
             net_table.names.remove(automata_name);
         }
         let net_table = self.networks.get_mut(net_name).unwrap();
-        let automata_table = AutomataNameTable::new(loc);
+        let automata_table = AutomataNameTable::new(automata_name, loc);
         net_table.automata.insert(automata_name, automata_table);
         self.status = CollectionStatus::Automata {
             net: net_name,
@@ -579,13 +579,15 @@ enum NetworkName {
 struct AutomataNameTable<'a> {
     names: HashMap<&'a str, AutomataInfo>,
     loc: Loc,
+    name: &'a str,
 }
 
 impl<'a> AutomataNameTable<'a> {
-    fn new(loc: Loc) -> Self {
+    fn new(name: &'a str, loc: Loc) -> Self {
         AutomataNameTable {
             names: HashMap::new(),
             loc,
+            name,
         }
     }
 
@@ -624,10 +626,21 @@ impl<'a> AutomataNameTable<'a> {
                 _ => None,
             })
             .collect();
-        match begin_states.len() {
-            0 => Err(BeginStateError::NoBeginState),
-            1 => Ok(()),
-            _ => Err(BeginStateError::MultipleBeginState(begin_states)),
+        let class = match begin_states.len() {
+            0 => Some(BeginStateErrorClass::NoBeginState),
+            1 => None,
+            _ => Some(BeginStateErrorClass::MultipleBeginState(begin_states)),
+        };
+
+        if let Some(class) = class {
+            let err = BeginStateError {
+                name: self.name,
+                loc: self.loc,
+                class,
+            };
+            Err(err)
+        } else {
+            Ok(())
         }
     }
 }
@@ -807,8 +820,8 @@ mod test {
             .expect_err("There are two begin states");
 
         match err {
-            NameError::BeginStateError(err) => match err {
-                BeginStateError::MultipleBeginState(states) => {
+            NameError::BeginStateError(err) => match err.class {
+                BeginStateErrorClass::MultipleBeginState(states) => {
                     assert_eq!(states.len(), 2);
                     assert!(states.contains(&"s0"));
                     assert!(states.contains(&"s1"));
@@ -835,8 +848,8 @@ mod test {
             .expect_err("There aren't begin states");
 
         match err {
-            NameError::BeginStateError(err) => match err {
-                BeginStateError::NoBeginState => {}
+            NameError::BeginStateError(err) => match err.class {
+                BeginStateErrorClass::NoBeginState => {}
                 _ => panic!("There aren't begin state ridefinition"),
             },
             err => panic!("{:?} should be a BeginStateError", err),

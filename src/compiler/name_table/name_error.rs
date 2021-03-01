@@ -53,7 +53,14 @@ pub struct NameRidefinitionError<'a> {
 }
 
 #[derive(Debug)]
-pub enum BeginStateError<'a> {
+pub struct BeginStateError<'a> {
+    pub class: BeginStateErrorClass<'a>,
+    pub loc: Loc,
+    pub name: &'a str,
+}
+
+#[derive(Debug)]
+pub enum BeginStateErrorClass<'a> {
     NoBeginState,
     MultipleBeginState(Vec<&'a str>),
 }
