@@ -275,6 +275,22 @@ mod test {
         }
     }
 
+    #[test]
+    fn test_undefined_label() {
+        let code = load_code_from_file("undefined_label");
+        let ast = parse(&code).expect("`undefined_label` should be syntactically correct");
+
+        let err = build_name_table(&ast).expect_err("rel label `r4` is not defined");
+
+        match err {
+            NameError::UndefinedLabel(err) => {
+                assert_eq!(err.name, "r4");
+                assert_eq!(err.class, NameClass::RelLabel);
+            }
+            _ => panic!("Expected Undefined Label, found {:?}", err),
+        }
+    }
+
     fn run_name_ridefinition_test(file: &str, name: &str, orig: &NameClass, ridef: &NameClass) {
         let code = load_code_from_file(file);
         let expect_msg = format!("`{}` should be syntactically correct", file);

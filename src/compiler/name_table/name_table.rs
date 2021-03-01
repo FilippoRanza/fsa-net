@@ -693,8 +693,8 @@ into_name_error! {MismatchedType}
 
 #[derive(Debug)]
 pub struct UndefinedLabel<'a> {
-    name: &'a str,
-    class: NameClass,
+    pub name: &'a str,
+    pub class: NameClass,
 }
 
 #[derive(Debug)]
