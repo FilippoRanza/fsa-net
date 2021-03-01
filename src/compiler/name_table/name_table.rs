@@ -699,9 +699,9 @@ pub struct UndefinedLabel<'a> {
 
 #[derive(Debug)]
 pub struct MismatchedType<'a> {
-    name: &'a str,
-    orig: NameClass,
-    curr: NameClass,
+    pub name: &'a str,
+    pub orig: NameClass,
+    pub curr: NameClass,
 }
 
 #[derive(Debug)]
@@ -816,7 +816,6 @@ mod test {
         let name_table = name_table.exit_automata();
         let name_table = name_table.exit_network();
         let name_table = name_table.insert_request("netname", (45, 123)).unwrap();
-        
 
         name_table
             .validate()
@@ -1038,12 +1037,4 @@ mod test {
             _ => panic!("expected NameRidefinitionError, found {:?}", err),
         }
     }
-
-
-    #[test]
-    fn test_double_request() {
-        
-    }
-
-
 }

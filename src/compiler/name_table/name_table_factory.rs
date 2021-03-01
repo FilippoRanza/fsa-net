@@ -219,19 +219,35 @@ mod test {
     #[test]
     fn test_undefined_network() {
         let code = load_code_from_file("undefined-network");
-        let ast  = parse(&code).expect("`undefined-network` should be syntactically correct");
+        let ast = parse(&code).expect("`undefined-network` should be syntactically correct");
 
-        let err = build_name_table(&ast).expect_err("`undefined-network` contains `MissingNetwork`");
+        let err =
+            build_name_table(&ast).expect_err("`undefined-network` contains `MissingNetwork`");
         match err {
             NameError::UndefinedNetwork(err) => {
                 assert_eq!(err.names.len(), 1);
                 assert_eq!(err.names[0].0, "MissingNetwork");
-            },
-            _ => panic!("expect UndefinedNetwork, found: {:?}", err)
+            }
+            _ => panic!("expect UndefinedNetwork, found: {:?}", err),
         }
-
     }
 
+    #[test]
+    fn test_mismatch_name_type() {
+        let code = load_code_from_file("mismatch-name-type");
+        let ast = parse(&code).expect("`mistmatch-name-type` should be syntactically correct");
+
+        let err =
+            build_name_table(&ast).expect_err("`mistmatch-name-type` contains a mistmatch name s0");
+        match err {
+            NameError::MismatchedType(err) => {
+                assert_eq!(err.name, "s0");
+                assert_eq!(err.orig, NameClass::State);
+                assert_eq!(err.curr, NameClass::ObsLabel);
+            }
+            _ => panic!("expect MistmatchedType, found, {:?}", err),
+        }
+    }
 
     #[test]
     fn test_undefined_names() {
