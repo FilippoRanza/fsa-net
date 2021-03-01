@@ -15,7 +15,7 @@ pub fn build_name_table<'a>(code: &Code<'a>) -> Result<GlobalNameTable<'a>, Name
 }
 
 fn collect_request<'a>(nt: GlobalNameTable<'a>, req: &Request<'a>) -> GlobalNameResult<'a> {
-    let nt = nt.add_network(req.name, req.get_location())?;
+    let nt = nt.insert_request(req.name, req.get_location())?;
     let nt = req.list.iter().try_fold(nt, collect_command)?;
     Ok(nt.exit_request())
 }
@@ -215,6 +215,23 @@ mod test {
             run_name_ridefinition_test(file, name, orig, ridef);
         }
     }
+
+    #[test]
+    fn test_undefined_network() {
+        let code = load_code_from_file("undefined-network");
+        let ast  = parse(&code).expect("`undefined-network` should be syntactically correct");
+
+        let err = build_name_table(&ast).expect_err("`undefined-network` contains `MissingNetwork`");
+        match err {
+            NameError::UndefinedNetwork(err) => {
+                assert_eq!(err.names.len(), 1);
+                assert_eq!(err.names[0].0, "MissingNetwork");
+            },
+            _ => panic!("expect UndefinedNetwork, found: {:?}", err)
+        }
+
+    }
+
 
     #[test]
     fn test_undefined_names() {

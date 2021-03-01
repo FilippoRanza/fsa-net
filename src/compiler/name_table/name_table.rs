@@ -62,7 +62,7 @@ impl<'a> GlobalNameTable<'a> {
         self.insert_automata_name(name, loc, AutomataName::Transition, NameStatus::Defined)
     }
 
-    pub fn add_network(mut self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
+    pub fn insert_request(mut self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
         if let Some(prev) = self.requests.get(name) {
             new_name_error! {name, NameClass::Request, NameClass::Request, prev.get_location(), loc}
         } else {
@@ -815,7 +815,8 @@ mod test {
         let name_table = name_table.declare_state("s2", (45, 35)).unwrap();
         let name_table = name_table.exit_automata();
         let name_table = name_table.exit_network();
-        let name_table = name_table.add_network("netname", (45, 123)).unwrap();
+        let name_table = name_table.insert_request("netname", (45, 123)).unwrap();
+        
 
         name_table
             .validate()
@@ -825,7 +826,7 @@ mod test {
     #[test]
     fn test_missing_network() {
         let name_table = GlobalNameTable::new();
-        let name_table = name_table.add_network("net", (0, 1)).unwrap();
+        let name_table = name_table.insert_request("net", (0, 1)).unwrap();
         let err = name_table
             .validate()
             .expect_err("`net` is not a defined network");
@@ -1037,4 +1038,12 @@ mod test {
             _ => panic!("expected NameRidefinitionError, found {:?}", err),
         }
     }
+
+
+    #[test]
+    fn test_double_request() {
+        
+    }
+
+
 }
