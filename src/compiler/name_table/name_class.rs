@@ -1,4 +1,3 @@
-
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum NameClass {
     Network,
@@ -11,4 +10,3 @@ pub enum NameClass {
     State,
     Transition,
 }
-

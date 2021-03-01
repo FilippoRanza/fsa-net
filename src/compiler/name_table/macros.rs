@@ -1,4 +1,3 @@
-
 #[macro_export]
 macro_rules! new_name_error {
     ($name:expr, $orig_cls:expr, $ridef_cls:expr, $orig_loc:expr, $ridef_loc:expr) => {{

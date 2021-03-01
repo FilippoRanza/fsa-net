@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use crate::new_name_error;
 use super::name_error::*;
+use crate::new_name_error;
 
 use super::name_class::NameClass;
 use super::request_table::{Request, RequestTable};
@@ -323,15 +323,15 @@ impl<'a> GlobalNameTable<'a> {
 
     fn get_container_location(&self) -> Loc {
         match self.status {
-            CollectionStatus::Automata{net, automata} => {
+            CollectionStatus::Automata { net, automata } => {
                 let net_table = self.networks.get(net).unwrap();
                 let automata_table = net_table.automata.get(automata).unwrap();
                 automata_table.loc
-            },
+            }
             CollectionStatus::Network(net) => {
                 let net_table = self.networks.get(net).unwrap();
                 net_table.loc
-            },
+            }
             CollectionStatus::Request(req) => {
                 let req_table = self.requests.get(req).unwrap();
                 req_table.loc
@@ -563,7 +563,7 @@ fn check_previous_definition<'a, T: Into<NameClass>>(
 struct NetworkNameInfo {
     stat: NameStatus,
     class: NetworkName,
-    loc: Loc
+    loc: Loc,
 }
 
 #[derive(Debug)]
@@ -578,14 +578,14 @@ enum NetworkName {
 #[derive(Debug)]
 struct AutomataNameTable<'a> {
     names: HashMap<&'a str, AutomataInfo>,
-    loc: Loc
+    loc: Loc,
 }
 
 impl<'a> AutomataNameTable<'a> {
     fn new(loc: Loc) -> Self {
         AutomataNameTable {
             names: HashMap::new(),
-            loc
+            loc,
         }
     }
 
@@ -700,10 +700,6 @@ impl<'a> NameStatus {
     }
 }
 
-
-
-
-
 impl NameClass {
     fn from_automata_name(cls: &AutomataName) -> Self {
         match cls {
@@ -733,7 +729,6 @@ impl From<&AutomataName> for NameClass {
         }
     }
 }
-
 
 #[cfg(test)]
 mod test {

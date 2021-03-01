@@ -1,6 +1,5 @@
-
-use super::Loc;
 use super::name_class::NameClass;
+use super::Loc;
 use crate::into_name_error;
 
 #[derive(Debug)]
@@ -58,4 +57,3 @@ pub enum BeginStateError<'a> {
     NoBeginState,
     MultipleBeginState(Vec<&'a str>),
 }
-
