@@ -236,7 +236,13 @@ pub struct Link<'a> {
 #[derive(DefaultBuilder)]
 pub struct Request<'a> {
     pub name: &'a str,
-    pub list: Vec<Command<'a>>,
+    pub list: Vec<CommandDecl<'a>>,
+}
+
+#[add_location]
+#[derive(DefaultBuilder)]
+pub struct CommandDecl<'a> {
+    pub cmd : Command<'a>,
 }
 
 pub enum Command<'a> {

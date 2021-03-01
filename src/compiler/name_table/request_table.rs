@@ -1,9 +1,9 @@
 use super::Loc;
-use fsa_net_parser::syntax_tree::Command;
+use fsa_net_parser::syntax_tree::{Command, CommandDecl};
 
 #[derive(Debug)]
 pub struct RequestTable<'a> {
-    loc: Loc,
+    pub loc: Loc,
     requests: Vec<Request<'a>>,
 }
 
@@ -44,9 +44,9 @@ impl<'a> RequestTable<'a> {
     }
 }
 
-pub fn convert_command<'a>(cmd: &Command<'a>) -> Request<'a> {
-    match cmd {
-        Command::Space => ((0, 0), RequestType::Space),
+pub fn convert_command<'a>(cmd: &CommandDecl<'a>) -> Request<'a> {
+    match &cmd.cmd {
+        Command::Space => (cmd.get_location(), RequestType::Space),
         Command::Linspace(cmd) => (
             cmd.get_location(),
             RequestType::Linspace(weak_copy(&cmd.name_list)),

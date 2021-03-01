@@ -148,9 +148,14 @@ Request: syntax_tree::Request<'input> = {
     <begin: @L> "request" <name: Name> "{" <list: RequestParamList>  "}" <end: @R> => syntax_tree::Request::new(name, list).set_location(begin, end)
 }
 
-RequestParamList: Vec<syntax_tree::Command<'input>> = {
-    <(<RequestParam> )+> 
+RequestParamList: Vec<syntax_tree::CommandDecl<'input>> = {
+    <(<RequestParamDecl> )+> 
 }
+
+RequestParamDecl: syntax_tree::CommandDecl<'input> = {
+    <begin: @L> <param: RequestParam> <end: @R> => syntax_tree::CommandDecl::new(param).set_location(begin, end)
+}
+
 
 
 RequestParam: syntax_tree::Command<'input> = {

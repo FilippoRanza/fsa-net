@@ -20,7 +20,7 @@ fn collect_request<'a>(nt: GlobalNameTable<'a>, req: &Request<'a>) -> GlobalName
     Ok(nt.exit_request())
 }
 
-fn collect_command<'a>(nt: GlobalNameTable<'a>, cmd: &Command<'a>) -> GlobalNameResult<'a> {
+fn collect_command<'a>(nt: GlobalNameTable<'a>, cmd: &CommandDecl<'a>) -> GlobalNameResult<'a> {
     let req = convert_command(cmd);
     nt.add_request(req)
 }
