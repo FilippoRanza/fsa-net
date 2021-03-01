@@ -33,19 +33,20 @@ fn collect_network<'a>(nt: GlobalNameTable<'a>, net: &Network<'a>) -> GlobalName
 
 fn collect_net_param<'a>(
     nt: GlobalNameTable<'a>,
-    param: &NetworkParameter<'a>,
+    param: &NetworkParameterDecl<'a>,
 ) -> GlobalNameResult<'a> {
-    match param {
+    let loc = param.get_location();
+    match &param.param {
         NetworkParameter::Automata(automata) => collect_automata(nt, automata),
         NetworkParameter::Events(events) => events
             .iter()
-            .try_fold(nt, |nt, ev| nt.declare_event(ev, (0, 0))),
+            .try_fold(nt, |nt, ev| nt.declare_event(ev, loc)),
         NetworkParameter::ObserveLabels(labels) => labels
             .iter()
-            .try_fold(nt, |nt, lbl| nt.declare_obs_label(lbl, (0, 0))),
+            .try_fold(nt, |nt, lbl| nt.declare_obs_label(lbl, loc)),
         NetworkParameter::RelevanceLabels(labels) => labels
             .iter()
-            .try_fold(nt, |nt, lbl| nt.declare_rel_label(lbl, (0, 0))),
+            .try_fold(nt, |nt, lbl| nt.declare_rel_label(lbl, loc)),
         NetworkParameter::Link(link) => collect_link(nt, link),
     }
 }
@@ -69,12 +70,13 @@ fn collect_automata<'a>(nt: GlobalNameTable<'a>, automata: &Automata<'a>) -> Glo
 
 fn collect_automata_param<'a>(
     nt: GlobalNameTable<'a>,
-    param: &AutomataParameter<'a>,
+    param: &AutomataParameterDecl<'a>,
 ) -> GlobalNameResult<'a> {
-    match param {
+    let loc = param.get_location();
+    match &param.param {
         AutomataParameter::StateDecl(state) => match state {
-            StateDeclaration::Begin(state) => nt.declare_begin(state, (0, 0)),
-            StateDeclaration::State(state) => nt.declare_state(state, (0, 0)),
+            StateDeclaration::Begin(state) => nt.declare_begin(state, loc),
+            StateDeclaration::State(state) => nt.declare_state(state, loc),
         },
         AutomataParameter::Transition(trans) => collect_transition(nt, trans),
     }

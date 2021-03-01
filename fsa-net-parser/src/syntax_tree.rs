@@ -9,7 +9,14 @@ pub enum Block<'a> {
 #[derive(DefaultBuilder)]
 pub struct Network<'a> {
     pub name: &'a str,
-    pub params: Vec<NetworkParameter<'a>>,
+    pub params: Vec<NetworkParameterDecl<'a>>,
+}
+
+
+#[add_location]
+#[derive(DefaultBuilder)]
+pub struct NetworkParameterDecl<'a> {
+    pub param : NetworkParameter<'a>
 }
 
 pub enum NetworkParameter<'a> {
@@ -24,13 +31,21 @@ pub enum NetworkParameter<'a> {
 #[derive(DefaultBuilder)]
 pub struct Automata<'a> {
     pub name: &'a str,
-    pub params: Vec<AutomataParameter<'a>>,
+    pub params: Vec<AutomataParameterDecl<'a>>,
+}
+
+#[add_location]
+#[derive(DefaultBuilder)]
+pub struct AutomataParameterDecl<'a> {
+    pub param: AutomataParameter<'a>
 }
 
 pub enum AutomataParameter<'a> {
     StateDecl(StateDeclaration<'a>),
     Transition(TransitionDeclaration<'a>),
 }
+
+
 
 pub enum StateDeclaration<'a> {
     State(&'a str),
