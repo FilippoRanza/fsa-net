@@ -1,6 +1,7 @@
 mod name_table;
 mod name_table_factory;
 mod request_table;
+mod macros;
 
 type Loc = (usize, usize);
 
