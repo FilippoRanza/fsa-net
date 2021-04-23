@@ -2,7 +2,7 @@ use super::Loc;
 use fsa_net_parser::syntax_tree::{Command, CommandDecl};
 
 /*
-    Collect all the user requests 
+    Collect all the user requests
     for the specified network
 */
 #[derive(Debug)]

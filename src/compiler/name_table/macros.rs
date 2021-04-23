@@ -1,6 +1,6 @@
 /*
-    Macro to reduce code duplication: 
-    each macro in this file is designed to 
+    Macro to reduce code duplication:
+    each macro in this file is designed to
     factorize all the syntactic noise present
     in certain definition or declaration
 */

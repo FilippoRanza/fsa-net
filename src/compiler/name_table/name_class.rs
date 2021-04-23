@@ -1,5 +1,5 @@
 /**
- * The various type of entities definable 
+ * The various type of entities definable
  * in fsa-lang
  */
 #[derive(Debug, PartialEq, Copy, Clone)]

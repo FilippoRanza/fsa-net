@@ -6,7 +6,7 @@ use fsa_net_parser::syntax_tree::*;
 use fsa_net_parser::Code;
 
 /**
- * Build the name table. 
+ * Build the name table.
  * This operation stops when the first name error is found
  */
 pub fn build_name_table<'a>(code: &Code<'a>) -> Result<GlobalNameTable<'a>, NameError<'a>> {

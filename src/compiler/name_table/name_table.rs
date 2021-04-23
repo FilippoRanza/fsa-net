@@ -185,31 +185,29 @@ impl<'a> GlobalNameTable<'a> {
 
     fn validate_network(self) -> GlobalNameResult<'a> {
         for (net_name, table) in self.networks.iter() {
-            table.stat.validate(net_name, table.loc)?;
-            for (name, item) in table.names.iter() {
-                item.stat.validate(name, item.loc)?;
-            }
-            for automata in table.automata.values() {
-                automata.validate()?;
-            }
+            table.validate(net_name)?;
         }
 
         Ok(self)
     }
 
     fn validate_requests(self) -> GlobalNameResult<'a> {
-        let names: Vec<(&'a str, Loc)> = self
-            .requests
-            .iter()
-            .filter(|(k, _)| !self.networks.contains_key(*k))
-            .map(|(k, v)| (*k, v.get_location()))
-            .collect();
+        let names = self.get_undefined_network_names();
         if names.len() > 0 {
             let err = UndefinedNetwork { names };
             Err(NameError::UndefinedNetwork(err))
         } else {
             self.validate_request_labels()
         }
+    }
+
+    fn get_undefined_network_names(&self) -> Vec<(&'a str, Loc)>  {
+        self
+        .requests
+        .iter()
+        .filter(|(k, _)| !self.networks.contains_key(*k))
+        .map(|(k, v)| (*k, v.get_location()))
+        .collect()
     }
 
     fn validate_request_labels(self) -> GlobalNameResult<'a> {
@@ -554,6 +552,20 @@ impl<'a> NetworkNameTable<'a> {
             None
         }
     }
+
+    fn validate(&self, net_name: &'a str) -> Result<(), NameError<'a>> {
+
+        self.stat.validate(net_name, self.loc)?;
+        for (name, item) in self.names.iter() {
+            item.validate(name)?;
+        }
+        for automata in self.automata.values() {
+            automata.validate()?;
+        }
+
+        Ok(())
+    }
+
 }
 
 fn check_prev_automata_def<'a>(
@@ -601,6 +613,12 @@ struct NetworkNameInfo {
     class: NetworkName,
     loc: Loc,
 }
+
+impl<'a> NetworkNameInfo {
+    fn validate(&self, name: &'a str) -> Result<(), UndefinedNameError<'a>> {
+        self.stat.validate(name, self.loc)
+    }
+} 
 
 #[derive(Debug)]
 enum NetworkName {
@@ -713,7 +731,7 @@ enum NameStatus {
     Unknown,
 }
 
-impl NameStatus {
+impl<'a> NameStatus {
     fn next(curr: Self, incoming: Self) -> Self {
         match (curr, incoming) {
             (NameStatus::Unknown, inc) => inc,
@@ -732,21 +750,19 @@ impl NameStatus {
             (NameStatus::Defined, NameStatus::Defined) => CheckStatus::Failure,
             _ => CheckStatus::Success,
         }
-    }
-}
-
-enum CheckStatus {
-    Success,
-    Failure,
-}
-
-impl<'a> NameStatus {
+    }    
+    
     fn validate(&self, name: &'a str, loc: Loc) -> Result<(), UndefinedNameError<'a>> {
         match self {
             Self::Undefined => Err(UndefinedNameError { name, loc }),
             _ => Ok(()),
         }
     }
+}
+
+enum CheckStatus {
+    Success,
+    Failure,
 }
 
 impl NameClass {
