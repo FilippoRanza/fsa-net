@@ -3,7 +3,10 @@
     names defined in the specification file
     and validate them:  ensuring that 
     there aren't reused name 
-    and ensuring some simple validation 
+    and ensuring some simple validation:
+        - ensure that each name is defined and not just used
+        - ensure that names used in requests are actually defined 
+        names of the correct type
 */
 
 use std::collections::HashMap;
