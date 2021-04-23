@@ -1,3 +1,11 @@
+/*
+    This file contains the definition 
+    for all the error managment type. 
+    Each enum or struct in this file 
+    is used to collect the information 
+    about each possible error type
+*/
+
 use super::name_class::NameClass;
 use super::Loc;
 use crate::into_name_error;

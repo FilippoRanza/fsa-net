@@ -5,6 +5,10 @@ use super::request_table::convert_command;
 use fsa_net_parser::syntax_tree::*;
 use fsa_net_parser::Code;
 
+/**
+ * Build the name table. 
+ * This operation stops when the first name error is found
+ */
 pub fn build_name_table<'a>(code: &Code<'a>) -> Result<GlobalNameTable<'a>, NameError<'a>> {
     let name_table = GlobalNameTable::new();
     let name_table = code.iter().try_fold(name_table, |nt, curr| match curr {

@@ -1,3 +1,11 @@
+/*
+    Code in this file collects all 
+    names defined in the specification file
+    and validate them:  ensuring that 
+    there aren't reused name 
+    and ensuring some simple validation 
+*/
+
 use std::collections::HashMap;
 
 use super::name_error::*;
@@ -7,6 +15,10 @@ use super::name_class::NameClass;
 use super::request_table::{Request, RequestTable};
 use super::Loc;
 
+/**
+ * This struct contain both the definition 
+ * in the network and the requests on this network
+ */
 #[derive(Debug)]
 pub struct GlobalNameTable<'a> {
     networks: HashMap<&'a str, NetworkNameTable<'a>>,
@@ -14,6 +26,21 @@ pub struct GlobalNameTable<'a> {
     status: CollectionStatus<'a>,
 }
 
+/*
+    declare_ methods are used when a name is 
+    declare, i.e. automata declaration
+
+    insert_ and add_ methods are used when a name is 
+    used by other declaration, i.e. 
+    automata name when in link declaration
+
+    This methods allows to 
+        - identify name reuse
+        - identify quickly if
+        a name is used in the wrong 
+        contex.
+
+*/
 impl<'a> GlobalNameTable<'a> {
     pub fn new() -> Self {
         Self {
@@ -36,6 +63,11 @@ impl<'a> GlobalNameTable<'a> {
         }
     }
 
+    /*
+        Most of the declare_ methods are just 
+        a convenience wrapper around the actual 
+        name insertion.  
+    */
     pub fn declare_link(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
         self.insert_network_name(name, NetworkName::Link, loc, NameStatus::Defined)
     }
@@ -109,6 +141,10 @@ impl<'a> GlobalNameTable<'a> {
         }
     }
 
+    /*
+        Most of the add_ method are gust convenience
+        wrapper around the actual name insertion method
+    */
     pub fn add_link(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
         self.insert_network_name(name, NetworkName::Link, loc, NameStatus::Undefined)
     }

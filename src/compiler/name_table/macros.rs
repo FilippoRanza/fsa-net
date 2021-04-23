@@ -1,3 +1,14 @@
+/*
+    Macro to reduce code duplication: 
+    each macro in this file is designed to 
+    factorize all the syntactic noise present
+    in certain definition or declaration
+*/
+
+/**
+ * Convert the input expression (usually just variable names)
+ * into a complex Error definition block
+ */
 #[macro_export]
 macro_rules! new_name_error {
     ($name:expr, $orig_cls:expr, $ridef_cls:expr, $orig_loc:expr, $ridef_loc:expr) => {{
@@ -13,6 +24,9 @@ macro_rules! new_name_error {
     }};
 }
 
+/**
+ * Add the implementation for From<T> for NameError
+ */
 #[macro_export]
 macro_rules! into_name_error {
     ($name:ident ) => {
