@@ -9,6 +9,12 @@
                 "kind": "test",
                 "isDefault": true
             }
+        },
+        {
+            "label": "format code",
+            "type": "shell",
+            "command": "cargo fmt",
+            "group": "none"
         }
     ]
 }

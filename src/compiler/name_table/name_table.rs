@@ -1,11 +1,11 @@
 /*
-    Code in this file collects all 
+    Code in this file collects all
     names defined in the specification file
-    and validate them:  ensuring that 
-    there aren't reused name 
+    and validate them:  ensuring that
+    there aren't reused name
     and ensuring some simple validation:
         - ensure that each name is defined and not just used
-        - ensure that names used in requests are actually defined 
+        - ensure that names used in requests are actually defined
         names of the correct type
 */
 
@@ -19,7 +19,7 @@ use super::request_table::{Request, RequestTable};
 use super::Loc;
 
 /**
- * This struct contain both the definition 
+ * This struct contain both the definition
  * in the network and the requests on this network
  */
 #[derive(Debug)]
@@ -30,17 +30,17 @@ pub struct GlobalNameTable<'a> {
 }
 
 /*
-    declare_ methods are used when a name is 
+    declare_ methods are used when a name is
     declare, i.e. automata declaration
 
-    insert_ and add_ methods are used when a name is 
-    used by other declaration, i.e. 
+    insert_ and add_ methods are used when a name is
+    used by other declaration, i.e.
     automata name when in link declaration
 
-    This methods allows to 
+    This methods allows to
         - identify name reuse
         - identify quickly if
-        a name is used in the wrong 
+        a name is used in the wrong
         contex.
 
 */
@@ -67,9 +67,9 @@ impl<'a> GlobalNameTable<'a> {
     }
 
     /*
-        Most of the declare_ methods are just 
-        a convenience wrapper around the actual 
-        name insertion.  
+        Most of the declare_ methods are just
+        a convenience wrapper around the actual
+        name insertion.
     */
     pub fn declare_link(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
         self.insert_network_name(name, NetworkName::Link, loc, NameStatus::Defined)
@@ -204,13 +204,12 @@ impl<'a> GlobalNameTable<'a> {
         }
     }
 
-    fn get_undefined_network_names(&self) -> Vec<(&'a str, Loc)>  {
-        self
-        .requests
-        .iter()
-        .filter(|(k, _)| !self.networks.contains_key(*k))
-        .map(|(k, v)| (*k, v.get_location()))
-        .collect()
+    fn get_undefined_network_names(&self) -> Vec<(&'a str, Loc)> {
+        self.requests
+            .iter()
+            .filter(|(k, _)| !self.networks.contains_key(*k))
+            .map(|(k, v)| (*k, v.get_location()))
+            .collect()
     }
 
     fn validate_request_labels(self) -> GlobalNameResult<'a> {
@@ -557,7 +556,6 @@ impl<'a> NetworkNameTable<'a> {
     }
 
     fn validate(&self, net_name: &'a str) -> Result<(), NameError<'a>> {
-
         self.stat.validate(net_name, self.loc)?;
         for (name, item) in self.names.iter() {
             item.validate(name)?;
@@ -568,7 +566,6 @@ impl<'a> NetworkNameTable<'a> {
 
         Ok(())
     }
-
 }
 
 fn check_prev_automata_def<'a>(
@@ -621,7 +618,7 @@ impl<'a> NetworkNameInfo {
     fn validate(&self, name: &'a str) -> Result<(), UndefinedNameError<'a>> {
         self.stat.validate(name, self.loc)
     }
-} 
+}
 
 #[derive(Debug)]
 enum NetworkName {
@@ -753,8 +750,8 @@ impl<'a> NameStatus {
             (NameStatus::Defined, NameStatus::Defined) => CheckStatus::Failure,
             _ => CheckStatus::Success,
         }
-    }    
-    
+    }
+
     fn validate(&self, name: &'a str, loc: Loc) -> Result<(), UndefinedNameError<'a>> {
         match self {
             Self::Undefined => Err(UndefinedNameError { name, loc }),
