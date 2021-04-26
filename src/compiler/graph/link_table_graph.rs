@@ -9,16 +9,16 @@ pub struct GraphBuilder<'a> {
 }
 
 impl<'a> GraphBuilder<'a> {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self::default()
     }
 
-    fn set_begin(mut self, begin: &'a str) -> Self {
+    pub fn set_begin(mut self, begin: &'a str) -> Self {
         self.begin = begin;
         self
     }
 
-    fn add_node(mut self, name: &'a str) -> Self {
+    pub fn add_node(mut self, name: &'a str) -> Self {
         let node = Node::new(name);
         self.nodes.push(node);
         self.adjacent_list.push(vec![]);
@@ -27,14 +27,14 @@ impl<'a> GraphBuilder<'a> {
         self
     }
 
-    fn add_link(mut self, from: &'a str, to: &'a str) -> Self {
+    pub fn add_link(mut self, from: &'a str, to: &'a str) -> Self {
         let src_node = self.node_indexs[from];
         let dst_node = self.node_indexs[to];
         self.adjacent_list[src_node].push(dst_node);
         self
     }
 
-    fn build_graph(self) -> Graph<'a> {
+    pub fn build_graph(self) -> Graph<'a> {
         let root = self.node_indexs[self.begin];
         Graph {
             nodes: self.nodes,
@@ -44,14 +44,14 @@ impl<'a> GraphBuilder<'a> {
     }
 }
 
-pub struct Graph<'a> {
+struct Graph<'a> {
     nodes: Vec<Node<'a>>,
     adjacent_list: Vec<Vec<usize>>,
     root: usize,
 }
 
 impl<'a> Graph<'a> {
-    fn breadth_first_search(mut self) -> bool {
+    pub fn breadth_first_search(mut self) -> Result<(), Vec<&'a str>> {
         let mut queue = VecDeque::new();
         self.nodes[self.root].status = NodeStatus::Discovered;
         let mut missing_nodes = self.nodes.len() - 1; // root is already seen
@@ -67,7 +67,17 @@ impl<'a> Graph<'a> {
             }
         }
 
-        missing_nodes == 0
+        if missing_nodes == 0 {
+            Ok(())
+        } else {
+            let undiscovered = self.collect_undiscovered();
+            Err(undiscovered)
+        }
+
+    }
+
+    fn collect_undiscovered(&self) -> Vec<&'a str> {
+        self.nodes.iter().filter(|n| !n.status.is_ok()).map(|n| n.name).collect()
     }
 }
 
@@ -88,6 +98,15 @@ impl<'a> Node<'a> {
 enum NodeStatus {
     Discovered,
     NonDiscovered,
+}
+
+impl NodeStatus {
+    fn is_ok(&self) -> bool {
+        match self {
+            Self::Discovered => true,
+            Self::NonDiscovered => false
+        }
+    }
 }
 
 impl Default for NodeStatus {
@@ -118,7 +137,7 @@ mod test {
             .set_begin("a")
             .build_graph();
 
-        assert!(graph.breadth_first_search())
+        assert!(graph.breadth_first_search().is_ok())
     }
 
     #[test]
@@ -139,6 +158,7 @@ mod test {
             .set_begin("a")
             .build_graph();
 
-        assert!(!graph.breadth_first_search())
+        let res = graph.breadth_first_search();
+        assert_eq!(res, Result::Err(vec!["e"]));
     }
 }
