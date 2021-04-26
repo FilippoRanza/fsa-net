@@ -53,7 +53,7 @@ pub struct Graph<'a> {
 impl<'a> Graph<'a> {
     fn breadth_first_search(mut self) -> bool {
         let mut queue = VecDeque::new();
-        self.nodes.get_mut(self.root).unwrap().status = NodeStatus::Discovered;
+        self.nodes[self.root].status = NodeStatus::Discovered;
         let mut missing_nodes = self.nodes.len() - 1; // root is already seen
         queue.push_back(self.root);
         while let Some(head) = queue.pop_front() {
