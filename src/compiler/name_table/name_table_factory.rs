@@ -136,13 +136,11 @@ fn collect_event<'a>(
 #[cfg(test)]
 mod test {
 
+    use test_utils::load_code_from_file;
     use super::super::name_class::NameClass;
     use super::*;
     use fsa_net_parser::parse;
 
-    use std::fs::File;
-    use std::io::Read;
-    use std::path::PathBuf;
 
     #[test]
     fn test_correct_file_code() {
@@ -330,18 +328,5 @@ mod test {
         }
     }
 
-    fn load_code_from_file(name: &str) -> String {
-        let file_path = if name.ends_with(".fnl") {
-            PathBuf::from("fnl-test-code").join(name)
-        } else {
-            let name = format!("{}.fnl", name);
-            PathBuf::from("fnl-test-code").join(name)
-        };
 
-        let mut buff = String::new();
-        let mut file = File::open(&file_path).expect(&format!("{:?} should exist", &file_path));
-        file.read_to_string(&mut buff)
-            .expect(&format!("{:?} should be read", &file_path));
-        buff
-    }
 }
