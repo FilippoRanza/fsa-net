@@ -1,11 +1,10 @@
-use std::cell::RefCell;
 use std::collections::{HashMap, VecDeque};
 
 #[derive(Default)]
 pub struct GraphBuilder<'a> {
     nodes: Vec<Node<'a>>,
+    adjacent_list: Vec<Vec<usize>>,
     node_indexs: HashMap<&'a str, usize>,
-    curr: usize,
     begin: &'a str,
 }
 
@@ -22,9 +21,8 @@ impl<'a> GraphBuilder<'a> {
     fn add_node(mut self, name: &'a str) -> Self {
         let node = Node::new(name);
         self.nodes.push(node);
-
-        self.node_indexs.insert(name, self.curr);
-        self.curr += 1;
+        self.adjacent_list.push(vec![]);
+        self.node_indexs.insert(name, self.nodes.len() - 1);
 
         self
     }
@@ -32,12 +30,7 @@ impl<'a> GraphBuilder<'a> {
     fn add_link(mut self, from: &'a str, to: &'a str) -> Self {
         let src_node = self.node_indexs[from];
         let dst_node = self.node_indexs[to];
-        let node = &mut self.nodes[src_node];
-        if let Some(adjacent) = &mut node.adjacent {
-            adjacent.push(dst_node);
-        } else {
-            unreachable!()
-        }
+        self.adjacent_list[src_node].push(dst_node);
         self
     }
 
@@ -45,6 +38,7 @@ impl<'a> GraphBuilder<'a> {
         let root = self.node_indexs[self.begin];
         Graph {
             nodes: self.nodes,
+            adjacent_list: self.adjacent_list,
             root,
         }
     }
@@ -52,43 +46,34 @@ impl<'a> GraphBuilder<'a> {
 
 pub struct Graph<'a> {
     nodes: Vec<Node<'a>>,
+    adjacent_list: Vec<Vec<usize>>,
     root: usize,
 }
 
 impl<'a> Graph<'a> {
     fn breadth_first_search(mut self) -> bool {
         let mut queue = VecDeque::new();
-        self.nodes
-            .get_mut(self.root)
-            .unwrap()
-            .status = 
-            NodeStatus::Discovered;
+        self.nodes.get_mut(self.root).unwrap().status = NodeStatus::Discovered;
+        let mut missing_nodes = self.nodes.len() - 1; // root is already seen
         queue.push_back(self.root);
         while let Some(head) = queue.pop_front() {
-            let adjacent_nodes = self.nodes[head].adjacent.take().unwrap();
-            for adj in &adjacent_nodes {
+            for adj in &self.adjacent_list[head] {
                 let node = &mut self.nodes[*adj];
                 if let NodeStatus::NonDiscovered = node.status {
                     node.status = NodeStatus::Discovered;
                     queue.push_back(*adj);
-                    
+                    missing_nodes -= 1;
                 }
             }
         }
 
-        for n in &self.nodes {
-            if let NodeStatus::NonDiscovered = n.status {
-                return false;
-            }
-        }
-        true
+        missing_nodes == 0
     }
 }
 
 struct Node<'a> {
     name: &'a str,
     status: NodeStatus,
-    adjacent: Option<Vec<usize>>,
 }
 
 impl<'a> Node<'a> {
@@ -96,7 +81,6 @@ impl<'a> Node<'a> {
         Self {
             name,
             status: NodeStatus::default(),
-            adjacent: Some(Vec::new()),
         }
     }
 }
@@ -135,12 +119,10 @@ mod test {
             .build_graph();
 
         assert!(graph.breadth_first_search())
-
     }
 
     #[test]
     fn test_unconnected_graph() {
-
         let graph = GraphBuilder::new()
             .add_node("a")
             .add_node("b")
@@ -158,8 +140,5 @@ mod test {
             .build_graph();
 
         assert!(!graph.breadth_first_search())
-
-
     }
-
 }
