@@ -136,11 +136,10 @@ fn collect_event<'a>(
 #[cfg(test)]
 mod test {
 
-    use test_utils::load_code_from_file;
     use super::super::name_class::NameClass;
     use super::*;
     use fsa_net_parser::parse;
-
+    use test_utils::load_code_from_file;
 
     #[test]
     fn test_correct_file_code() {
@@ -327,6 +326,4 @@ mod test {
             err => panic!("Expected NameRidefinitionError, found {:?}", err),
         }
     }
-
-
 }

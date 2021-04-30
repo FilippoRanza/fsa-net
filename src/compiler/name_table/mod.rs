@@ -8,4 +8,5 @@ mod request_table;
 type Loc = (usize, usize);
 
 pub use name_error::NameError;
+pub use name_table::GlobalNameTable;
 pub use name_table_factory::build_name_table;

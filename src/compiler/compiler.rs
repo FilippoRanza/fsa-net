@@ -1,21 +1,21 @@
-use super::error;
 use super::automata_connection;
+use super::error;
+use super::link_connection;
 use super::name_table;
 
 use fsa_net_parser::Code;
 
-pub fn compile<'a>(code: &Code<'a>) -> Result<(), error::CompileError<'a>> {
+pub fn compile<'a>(code: &'a Code<'a>) -> Result<(), error::CompileError<'a>> {
     let _ = name_table::build_name_table(code)?;
     automata_connection::check_connection(code)?;
-
+    link_connection::link_check(code)?;
     Ok(())
 }
-
 
 #[cfg(test)]
 mod test {
 
-    use super::*;    
+    use super::*;
 
     use fsa_net_parser::parse;
     use test_utils::load_code_from_file;
@@ -36,9 +36,7 @@ mod test {
         let err = res.unwrap_err();
         match err {
             error::CompileError::GraphError(err) => assert_eq!(err, vec!["a4"]),
-            err => panic!("Expected GraphError, found: {:?}", err)
+            err => panic!("Expected GraphError, found: {:?}", err),
         }
     }
-
-
 }
