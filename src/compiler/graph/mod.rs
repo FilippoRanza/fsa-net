@@ -1,6 +1,6 @@
 mod check_connection;
-mod link_table_graph;
+mod adjacent_list_graph;
 pub type GraphError<'a> = Vec<&'a str>;
 
 pub use check_connection::check_connection;
-pub use link_table_graph::GraphBuilder;
+pub use adjacent_list_graph::GraphBuilder;
