@@ -1,4 +1,4 @@
-use super::graph::GraphError;
+use super::automata_connection::GraphError;
 use super::name_table::NameError;
 
 #[derive(Debug)]
