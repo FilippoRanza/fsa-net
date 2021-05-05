@@ -14,6 +14,7 @@ pub fn link_check<'a>(code: &'a Code<'a>) -> Result<(), LinkError<'a>> {
 pub enum LinkError<'a> {
     NotInput(LinkConnectionError<'a>),
     NotOutput(LinkConnectionError<'a>),
+    MultipleLinkUse(Vec<LinkCountError<'a>>),
 }
 
 impl<'a> LinkError<'a> {
@@ -27,14 +28,37 @@ impl<'a> LinkError<'a> {
 }
 
 #[derive(Debug)]
+pub struct LinkCountError<'a> {
+    pub automata: &'a str,
+    pub link: &'a str,
+    pub count: usize,
+}
+
+impl<'a> LinkCountError<'a> {
+    fn new(automata: &'a str, link: &'a str, count: usize) -> Self {
+        Self {
+            automata,
+            link,
+            count,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct LinkConnectionError<'a> {
     pub automata: &'a str,
     pub link: &'a str,
 }
 
 fn validate_link<'a>(factory: CheckLinkFactory<'a>) -> Result<(), LinkError<'a>> {
+    let mut usage_counter = HashMap::new();
     for trans in &factory.links_use {
         let link = factory.links_def.get(trans.link).unwrap();
+        if let Some(count) = usage_counter.get_mut(&(trans.automata, link.name)) {
+            *count += 1;
+        } else {
+            usage_counter.insert((trans.automata, link.name), 1);
+        }
         match trans.usage {
             LinkUsageType::Input => {
                 if link.dst != trans.automata {
@@ -48,7 +72,17 @@ fn validate_link<'a>(factory: CheckLinkFactory<'a>) -> Result<(), LinkError<'a>>
             }
         }
     }
-    Ok(())
+
+    let multiple_use: Vec<LinkCountError> = usage_counter
+        .into_iter()
+        .filter(|(_, v)| *v > 1)
+        .map(|((a, l), v)| LinkCountError::new(a, l, v))
+        .collect();
+    if multiple_use.len() > 0 {
+        Err(LinkError::MultipleLinkUse(multiple_use))
+    } else {
+        Ok(())
+    }
 }
 
 #[derive(Default)]

@@ -53,7 +53,27 @@ mod test {
                     assert_eq!(err.automata, "A");
                     assert_eq!(err.link, "L1");
                 }
-                LinkError::NotOutput(_) => panic!(),
+                _ => panic!(),
+            },
+            err => panic!("Expected GraphError, found: {:?}", err),
+        }
+    }
+    #[test]
+    fn test_multiple_link_use() {
+        let code = load_code_from_file("multiple_link_usage.fnl");
+        let ast = parse(&code).expect("`multiple_link_usage.fnl` should be syntactically correcy");
+        let res = compile(&ast);
+        let err = res.unwrap_err();
+        match err {
+            error::CompileError::LinkError(err) => match err {
+                LinkError::MultipleLinkUse(err) => {
+                    assert_eq!(err.len(), 1);
+                    let err = &err[0];
+                    assert_eq!(err.automata, "B");
+                    assert_eq!(err.link, "L2");
+                    assert_eq!(err.count, 2);
+                },
+                _ => panic!(),
             },
             err => panic!("Expected GraphError, found: {:?}", err),
         }
