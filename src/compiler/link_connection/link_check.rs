@@ -51,14 +51,10 @@ pub struct LinkConnectionError<'a> {
 }
 
 fn validate_link<'a>(factory: CheckLinkFactory<'a>) -> Result<(), LinkError<'a>> {
-    let mut usage_counter = HashMap::new();
+    let mut usage_counter = LinkUsageCounter::default();
     for trans in &factory.links_use {
+        usage_counter.count(trans);
         let link = factory.links_def.get(trans.link).unwrap();
-        if let Some(count) = usage_counter.get_mut(&(trans.automata, link.name)) {
-            *count += 1;
-        } else {
-            usage_counter.insert((trans.automata, link.name), 1);
-        }
         match trans.usage {
             LinkUsageType::Input => {
                 if link.dst != trans.automata {
@@ -73,13 +69,9 @@ fn validate_link<'a>(factory: CheckLinkFactory<'a>) -> Result<(), LinkError<'a>>
         }
     }
 
-    let multiple_use: Vec<LinkCountError> = usage_counter
-        .into_iter()
-        .filter(|(_, v)| *v > 1)
-        .map(|((a, l), v)| LinkCountError::new(a, l, v))
-        .collect();
-    if multiple_use.len() > 0 {
-        Err(LinkError::MultipleLinkUse(multiple_use))
+
+    if let Some(multiple_use_err) = usage_counter.collect_error() {
+        Err(LinkError::MultipleLinkUse(multiple_use_err))
     } else {
         Ok(())
     }
@@ -122,13 +114,13 @@ impl<'a> CheckLinkFactory<'a> {
 
     fn insert_transition(mut self, trans: &TransitionDeclaration<'a>, auto_name: &'a str) -> Self {
         if let Some(input) = &trans.input {
-            let info = LinkUsage::new(auto_name, input.link, LinkUsageType::Input);
+            let info = LinkUsage::new(auto_name, input.link, trans.name, LinkUsageType::Input);
             self.links_use.push(info);
         }
 
         if let Some(outputs) = &trans.output {
             for output in outputs {
-                let info = LinkUsage::new(auto_name, output.link, LinkUsageType::Output);
+                let info = LinkUsage::new(auto_name, output.link, trans.name, LinkUsageType::Output);
                 self.links_use.push(info);
             }
         }
@@ -149,14 +141,16 @@ fn is_transaction<'a, 'b: 'a>(
 struct LinkUsage<'a> {
     automata: &'a str,
     link: &'a str,
+    trans: &'a str,
     usage: LinkUsageType,
 }
 
 impl<'a> LinkUsage<'a> {
-    fn new(automata_name: &'a str, link_name: &'a str, usage: LinkUsageType) -> Self {
+    fn new(automata_name: &'a str, link_name: &'a str, trans: &'a str, usage: LinkUsageType) -> Self {
         Self {
             automata: automata_name,
             link: link_name,
+            trans,
             usage,
         }
     }
@@ -179,5 +173,58 @@ impl<'a> LinkInfo<'a> {
             src: lk.source,
             dst: lk.destination,
         }
+    }
+}
+
+#[derive(Default)]
+struct LinkUsageCounter<'a> {
+    counter: HashMap<LinkUsageKey<'a>, usize>,
+}
+
+impl<'a> LinkUsageCounter<'a> {
+    fn count(&mut self, info: &LinkUsage<'a>) {
+        let key = info.into();
+        if let Some(count) = self.counter.get_mut(&key) {
+            *count += 1;
+        } else {
+            self.counter.insert(key, 1);
+        }
+    }
+
+    fn collect_error(self) -> Option<Vec<LinkCountError<'a>>> {
+        let count_err: Vec<LinkCountError<'a>> = self
+            .counter
+            .into_iter()
+            .filter(|(_, v)| *v > 1)
+            .map(|(k, v)| LinkCountError::new(k.automata, k.link, v))
+            .collect();
+        if count_err.len() > 0 {
+            Some(count_err)
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Hash, PartialEq, Eq)]
+struct LinkUsageKey<'a> {
+    automata: &'a str,
+    link: &'a str,
+    trans: &'a str,
+}
+
+impl<'a> LinkUsageKey<'a> {
+    fn new(automata: &'a str, link: &'a str, trans: &'a str) -> Self {
+        Self {
+            automata,
+            link,
+            trans,
+        }
+    }
+}
+
+impl<'a> From<&LinkUsage<'a>> for LinkUsageKey<'a> {
+    fn from(usage: &LinkUsage<'a>) -> Self {
+        Self::new(usage.automata, usage.link, usage.trans)
     }
 }

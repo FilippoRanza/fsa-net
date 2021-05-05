@@ -4,6 +4,8 @@ network TestNetwork {
     link L1 A B
     link L2 B A
 
+    events e1, e2, e3, e4
+
     automata A {
         begin a1
         state a2
@@ -19,8 +21,16 @@ network TestNetwork {
         state b2
         state b3
 
-        trans t1 b1 b2
-        trans t2 b2 b3
+        trans t1 {
+            src b1
+            dst b2
+            output e1(L2)
+        }
+        trans t2 {
+            src b2
+            dst b3
+            output e1(L2)
+        }
         trans t3 b3 b1
     }
 

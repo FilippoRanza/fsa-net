@@ -72,7 +72,7 @@ mod test {
                     assert_eq!(err.automata, "B");
                     assert_eq!(err.link, "L2");
                     assert_eq!(err.count, 2);
-                },
+                }
                 _ => panic!(),
             },
             err => panic!("Expected GraphError, found: {:?}", err),
