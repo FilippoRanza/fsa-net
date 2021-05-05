@@ -277,7 +277,7 @@ impl<'a> GlobalNameTable<'a> {
         stat: NameStatus,
     ) -> GlobalNameResult<'a> {
         match &self.status {
-            CollectionStatus::Automata{net, automata: _}| CollectionStatus::Network(net) => {        
+            CollectionStatus::Automata { net, automata: _ } | CollectionStatus::Network(net) => {
                 let net_class: NameClass = (&class).into();
                 let name_stat = self.check_network_name(name, net, loc, net_class, &stat)?;
                 let name_stat = name_stat.get_name_status();
@@ -287,7 +287,7 @@ impl<'a> GlobalNameTable<'a> {
                 net_table.names.insert(name, info);
                 Ok(self)
             }
-            _ => panic!("Call add_automata in state: {:?}", self.status)
+            _ => panic!("Call add_automata in state: {:?}", self.status),
         }
     }
 
@@ -528,7 +528,8 @@ impl<'a> NetworkNameTable<'a> {
         stat: NameStatus,
     ) -> Result<Option<NameStatus>, NameError<'a>> {
         if let Some(prev) = self.names.get(name) {
-            let stat = check_previous_definition(name, &prev.class, cls, prev.loc, loc, prev.stat, stat)?;
+            let stat =
+                check_previous_definition(name, &prev.class, cls, prev.loc, loc, prev.stat, stat)?;
             Ok(Some(stat))
         } else if let Some(prev) = self.automata.get(name) {
             check_previous_definition(
@@ -766,7 +767,6 @@ impl<'a> NameStatus {
         }
     }
 }
-
 
 enum CheckStatus {
     Success,

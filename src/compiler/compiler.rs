@@ -15,6 +15,7 @@ pub fn compile<'a>(code: &'a Code<'a>) -> Result<(), error::CompileError<'a>> {
 #[cfg(test)]
 mod test {
 
+    use super::super::link_connection::LinkError;
     use super::*;
 
     use fsa_net_parser::parse;
@@ -47,10 +48,14 @@ mod test {
         let res = compile(&ast);
         let err = res.unwrap_err();
         match err {
-            error::CompileError::LinkError(err) => {},
+            error::CompileError::LinkError(err) => match err {
+                LinkError::NotInput(err) => {
+                    assert_eq!(err.automata, "A");
+                    assert_eq!(err.link, "L1");
+                }
+                LinkError::NotOutput(_) => panic!(),
+            },
             err => panic!("Expected GraphError, found: {:?}", err),
         }
     }
-
-
 }

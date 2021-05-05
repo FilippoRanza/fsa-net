@@ -11,8 +11,25 @@ pub fn link_check<'a>(code: &'a Code<'a>) -> Result<(), LinkError<'a>> {
 }
 
 #[derive(Debug)]
-pub struct LinkError<'a> {
-    name: &'a str,
+pub enum LinkError<'a> {
+    NotInput(LinkConnectionError<'a>),
+    NotOutput(LinkConnectionError<'a>),
+}
+
+impl<'a> LinkError<'a> {
+    fn new_not_input_error(automata: &'a str, link: &'a str) -> Self {
+        Self::NotInput(LinkConnectionError { automata, link })
+    }
+
+    fn new_not_output_error(automata: &'a str, link: &'a str) -> Self {
+        Self::NotOutput(LinkConnectionError { automata, link })
+    }
+}
+
+#[derive(Debug)]
+pub struct LinkConnectionError<'a> {
+    pub automata: &'a str,
+    pub link: &'a str,
 }
 
 fn validate_link<'a>(factory: CheckLinkFactory<'a>) -> Result<(), LinkError<'a>> {
@@ -21,16 +38,12 @@ fn validate_link<'a>(factory: CheckLinkFactory<'a>) -> Result<(), LinkError<'a>>
         match trans.usage {
             LinkUsageType::Input => {
                 if link.dst != trans.automata {
-                    return Err(LinkError {
-                        name: trans.automata,
-                    });
+                    return Err(LinkError::new_not_input_error(trans.automata, link.name));
                 }
             }
             LinkUsageType::Output => {
                 if link.src != trans.automata {
-                    return Err(LinkError {
-                        name: trans.automata,
-                    });
+                    return Err(LinkError::new_not_output_error(trans.automata, link.name));
                 }
             }
         }
@@ -121,12 +134,14 @@ enum LinkUsageType {
 }
 
 struct LinkInfo<'a> {
+    name: &'a str,
     src: &'a str,
     dst: &'a str,
 }
 impl<'a> LinkInfo<'a> {
     fn new(lk: &Link<'a>) -> Self {
         Self {
+            name: lk.name,
             src: lk.source,
             dst: lk.destination,
         }
