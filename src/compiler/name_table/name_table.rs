@@ -276,16 +276,18 @@ impl<'a> GlobalNameTable<'a> {
         loc: Loc,
         stat: NameStatus,
     ) -> GlobalNameResult<'a> {
-        let name_stat = self.check_name(name, loc, &class, &stat)?;
-        let name_stat = name_stat.get_name_status();
-        if let CollectionStatus::Network(net_name) = self.status {
-            let net_table = self.networks.get_mut(net_name).unwrap();
-            let stat = NameStatus::next(name_stat, stat);
-            let info = NetworkNameInfo { stat, class, loc };
-            net_table.names.insert(name, info);
-            Ok(self)
-        } else {
-            panic!("Call add_automata in state: {:?}", self.status)
+        match &self.status {
+            CollectionStatus::Automata{net, automata: _}| CollectionStatus::Network(net) => {        
+                let net_class: NameClass = (&class).into();
+                let name_stat = self.check_network_name(name, net, loc, net_class, &stat)?;
+                let name_stat = name_stat.get_name_status();
+                let net_table = self.networks.get_mut(net).unwrap();
+                let stat = NameStatus::next(name_stat, stat);
+                let info = NetworkNameInfo { stat, class, loc };
+                net_table.names.insert(name, info);
+                Ok(self)
+            }
+            _ => panic!("Call add_automata in state: {:?}", self.status)
         }
     }
 
@@ -415,6 +417,7 @@ fn next_stat_and_class(
     }
 }
 
+#[derive(Debug)]
 enum CheckNameResult {
     NameStatus(NameStatus),
     AutomataNameStatus((NameStatus, AutomataName)),
@@ -465,8 +468,12 @@ impl<'a> NetworkNameTable<'a> {
         stat: NameStatus,
     ) -> Result<CheckNameResult, NameError<'a>> {
         let cls = cls.into();
-        self.check_network_level_names(name, cls, loc, stat)?;
-        self.check_automata_items(name, cls, loc)
+        let stat = self.check_network_level_names(name, cls, loc, stat)?;
+        if let Some(stat) = stat {
+            Ok(CheckNameResult::NameStatus(stat))
+        } else {
+            self.check_automata_items(name, cls, loc)
+        }
     }
 
     fn check_automata_name<T: Into<NameClass>>(
@@ -519,10 +526,10 @@ impl<'a> NetworkNameTable<'a> {
         cls: NameClass,
         loc: Loc,
         stat: NameStatus,
-    ) -> Result<(), NameError<'a>> {
+    ) -> Result<Option<NameStatus>, NameError<'a>> {
         if let Some(prev) = self.names.get(name) {
-            check_previous_definition(name, &prev.class, cls, prev.loc, loc, prev.stat, stat)?;
-            Ok(())
+            let stat = check_previous_definition(name, &prev.class, cls, prev.loc, loc, prev.stat, stat)?;
+            Ok(Some(stat))
         } else if let Some(prev) = self.automata.get(name) {
             check_previous_definition(
                 name,
@@ -533,9 +540,9 @@ impl<'a> NetworkNameTable<'a> {
                 NameStatus::Defined,
                 stat,
             )?;
-            Ok(())
+            Ok(None)
         } else {
-            Ok(())
+            Ok(None)
         }
     }
 
@@ -759,6 +766,7 @@ impl<'a> NameStatus {
         }
     }
 }
+
 
 enum CheckStatus {
     Success,

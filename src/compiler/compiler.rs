@@ -39,4 +39,18 @@ mod test {
             err => panic!("Expected GraphError, found: {:?}", err),
         }
     }
+
+    #[test]
+    fn test_non_input_link() {
+        let code = load_code_from_file("link_not_in_input.fnl");
+        let ast = parse(&code).expect("`link_not_in_input.fnl` should be syntactically correcy");
+        let res = compile(&ast);
+        let err = res.unwrap_err();
+        match err {
+            error::CompileError::LinkError(err) => {},
+            err => panic!("Expected GraphError, found: {:?}", err),
+        }
+    }
+
+
 }
