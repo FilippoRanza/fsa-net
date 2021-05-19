@@ -69,7 +69,6 @@ fn validate_link<'a>(factory: CheckLinkFactory<'a>) -> Result<(), LinkError<'a>>
         }
     }
 
-
     if let Some(multiple_use_err) = usage_counter.collect_error() {
         Err(LinkError::MultipleLinkUse(multiple_use_err))
     } else {
@@ -120,7 +119,8 @@ impl<'a> CheckLinkFactory<'a> {
 
         if let Some(outputs) = &trans.output {
             for output in outputs {
-                let info = LinkUsage::new(auto_name, output.link, trans.name, LinkUsageType::Output);
+                let info =
+                    LinkUsage::new(auto_name, output.link, trans.name, LinkUsageType::Output);
                 self.links_use.push(info);
             }
         }
@@ -146,7 +146,12 @@ struct LinkUsage<'a> {
 }
 
 impl<'a> LinkUsage<'a> {
-    fn new(automata_name: &'a str, link_name: &'a str, trans: &'a str, usage: LinkUsageType) -> Self {
+    fn new(
+        automata_name: &'a str,
+        link_name: &'a str,
+        trans: &'a str,
+        usage: LinkUsageType,
+    ) -> Self {
         Self {
             automata: automata_name,
             link: link_name,

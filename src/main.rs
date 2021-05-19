@@ -4,6 +4,7 @@ use structopt::StructOpt;
 
 mod compiler;
 mod input_output;
+mod network;
 
 #[derive(StructOpt)]
 struct Arguments {
