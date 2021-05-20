@@ -1,7 +1,4 @@
-
-
-
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub struct State {
     states: Vec<usize>,
     links: Vec<Option<usize>>,
@@ -56,16 +53,15 @@ impl State {
             false
         }
     }
-
 }
 
 pub struct Network {
     automata: Vec<Automata>,
-    links: Vec<Link>
+    links: Vec<Link>,
 }
 
 impl Network {
-    fn step_one(&self, state: &State) -> Vec<State> {
+    fn step_one(&self, state: &State) -> Vec<(TransEvent, State)> {
         let mut output = Vec::new();
         for auto in &self.automata {
             let mut next = auto.step_one(state);
@@ -75,18 +71,20 @@ impl Network {
     }
 }
 
-
 struct Automata {
     adjacent_list: Vec<Vec<Adjacent>>,
-    index: usize
+    index: usize,
 }
 
 impl Automata {
     fn new(index: usize, adjacent_list: Vec<Vec<Adjacent>>) -> Self {
-        Self { adjacent_list, index }
+        Self {
+            adjacent_list,
+            index,
+        }
     }
 
-    fn step_one(&self, net_state: &State) -> Vec<State> {
+    fn step_one(&self, net_state: &State) -> Vec<(TransEvent, State)> {
         let curr_state = net_state.get_state(self.index);
         let next_states = &self.adjacent_list[curr_state];
         let mut output = Vec::new();
@@ -98,7 +96,7 @@ impl Automata {
             }
         }
         output
-    } 
+    }
 }
 
 struct Adjacent {
@@ -115,7 +113,6 @@ struct Transition {
 
 impl Transition {
     fn is_enabled(&self, state: &State) -> bool {
-        
         if let Some(input) = &self.input {
             if !state.has_event_link(input.link, input.event) {
                 return false;
@@ -133,7 +130,7 @@ impl Transition {
         true
     }
 
-    fn apply_transition(&self, mut state: State) -> State {
+    fn apply_transition(&self, mut state: State) -> (TransEvent, State) {
         if let Some(input) = &self.input {
             state = state.drain_link(input.link);
         }
@@ -143,20 +140,33 @@ impl Transition {
                 state = state.fill_link(out.link, out.event);
             }
         }
-        state
-    }
 
+        (self.into(), state)
+    }
 }
 
+pub struct TransEvent {
+    obs: Option<usize>,
+    rel: Option<usize>,
+}
+
+impl From<&Transition> for TransEvent {
+    fn from(trans: &Transition) -> Self {
+        Self {
+            obs: trans.obs,
+            rel: trans.rel,
+        }
+    }
+}
 
 struct Event {
     event: usize,
-    link: usize
+    link: usize,
 }
 
 struct Link {
-    src: usize, 
-    dst: usize
+    src: usize,
+    dst: usize,
 }
 
 fn zeros<T>(count: usize) -> Vec<T>
@@ -164,4 +174,76 @@ where
     T: Default,
 {
     (0..count).map(|_| T::default()).collect()
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+
+    #[test]
+    fn test_initial_state() {
+        let initial = State::initial(4, 1);
+        assert!(initial.is_final());
+    }
+
+    #[test]
+    fn test_enabled_transition() {
+        let state = State::initial(3, 2).fill_link(1, 3);
+        let trans = Transition {
+            input: Some(Event { event: 3, link: 1 }),
+            output: None,
+            rel: None,
+            obs: None,
+        };
+        assert!(trans.is_enabled(&state));
+
+        let trans = Transition {
+            input: None,
+            output: Some(vec![Event { event: 3, link: 1 }]),
+            rel: None,
+            obs: None,
+        };
+        assert!(!trans.is_enabled(&state));
+
+        let trans = Transition {
+            input: Some(Event { event: 3, link: 1 }),
+            output: Some(vec![Event { event: 2, link: 0 }]),
+            rel: None,
+            obs: None,
+        };
+        assert!(trans.is_enabled(&state));
+    }
+
+    #[test]
+    fn test_apply_transition() {
+        let state = State::initial(3, 2).fill_link(1, 3);
+
+        let in_link = 1;
+        let out_link = 0;
+        let in_ev = 3;
+        let out_ev = 2;
+        let trans = Transition {
+            input: Some(Event {
+                event: in_ev,
+                link: in_link,
+            }),
+            output: Some(vec![Event {
+                event: out_ev,
+                link: out_link,
+            }]),
+            rel: Some(31),
+            obs: Some(12),
+        };
+        assert!(trans.is_enabled(&state));
+
+        let (event, state) = trans.apply_transition(state);
+
+        assert!(state.links[in_link].is_none());
+        assert_eq!(state.links[out_link].unwrap(), out_ev);
+
+        assert_eq!(event.obs.unwrap(), 12);
+        assert_eq!(event.rel.unwrap(), 31);
+
+    }
 }

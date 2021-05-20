@@ -3,6 +3,8 @@ use std::path;
 use structopt::StructOpt;
 
 mod compiler;
+mod engine;
+mod graph;
 mod input_output;
 mod network;
 
