@@ -244,6 +244,48 @@ mod test {
 
         assert_eq!(event.obs.unwrap(), 12);
         assert_eq!(event.rel.unwrap(), 31);
+    }
 
+    #[test]
+    fn test_step_one() {
+        let in_link = 1;
+        let out_link = 0;
+        let in_ev = 3;
+        let out_ev = 2;
+        let trans = Transition {
+            input: Some(Event {
+                event: in_ev,
+                link: in_link,
+            }),
+            output: Some(vec![Event {
+                event: out_ev,
+                link: out_link,
+            }]),
+            rel: Some(31),
+            obs: Some(12),
+        };
+
+        let automata = Automata::new(
+            0,
+            vec![vec![Adjacent {
+                state: 1,
+                trans: trans,
+            }]],
+        );
+
+        let state = State::initial(1, 2).fill_link(1, 3);
+
+        let next = automata.step_one(&state);
+        assert_eq!(next.len(), 1);
+
+        let (event, state) = &next[0];
+
+        assert!(state.links[in_link].is_none());
+        assert_eq!(state.links[out_link].unwrap(), out_ev);
+
+        assert_eq!(state.states[0], 1);
+
+        assert_eq!(event.obs.unwrap(), 12);
+        assert_eq!(event.rel.unwrap(), 31);
     }
 }
