@@ -1,3 +1,5 @@
+use crate::utils::zeros;
+
 #[derive(PartialEq, Eq, Clone, Debug, Hash)]
 pub struct State {
     states: Vec<usize>,
@@ -61,7 +63,15 @@ pub struct Network {
 }
 
 impl Network {
-    fn step_one(&self, state: &State) -> Vec<(TransEvent, State)> {
+    pub fn new(automata: Vec<Automata>, links: Vec<Link>) -> Self {
+        Self { automata, links }
+    }
+
+    pub fn get_initial_state(&self) -> State {
+        State::initial(self.automata.len(), self.links.len())
+    }
+
+    pub fn step_one(&self, state: &State) -> Vec<(TransEvent, State)> {
         let mut output = Vec::new();
         for auto in &self.automata {
             let mut next = auto.step_one(state);
@@ -71,13 +81,13 @@ impl Network {
     }
 }
 
-struct Automata {
+pub struct Automata {
     adjacent_list: Vec<Vec<Adjacent>>,
     index: usize,
 }
 
 impl Automata {
-    fn new(index: usize, adjacent_list: Vec<Vec<Adjacent>>) -> Self {
+    pub fn new(index: usize, adjacent_list: Vec<Vec<Adjacent>>) -> Self {
         Self {
             adjacent_list,
             index,
@@ -99,12 +109,19 @@ impl Automata {
     }
 }
 
-struct Adjacent {
+pub struct Adjacent {
     state: usize,
     trans: Transition,
 }
 
-struct Transition {
+impl Adjacent {
+    pub fn new(state: usize, trans: Transition) -> Self {
+        Self { state, trans }
+    }
+}
+
+#[derive(Default)]
+pub struct Transition {
     input: Option<Event>,
     output: Option<Vec<Event>>,
     rel: Option<usize>,
@@ -112,6 +129,34 @@ struct Transition {
 }
 
 impl Transition {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn set_input(mut self, ev: Event) -> Self {
+        self.input = Some(ev);
+        self
+    }
+
+    pub fn add_output(mut self, ev: Event) -> Self {
+        if let Some(output) = &mut self.output {
+            output.push(ev);
+        } else {
+            self.output = Some(vec![ev]);
+        }
+        self
+    }
+
+    pub fn set_relevance(mut self, rel: usize) -> Self {
+        self.rel = Some(rel);
+        self
+    }
+
+    pub fn set_observability(mut self, obs: usize) -> Self {
+        self.obs = Some(obs);
+        self
+    }
+
     fn is_enabled(&self, state: &State) -> bool {
         if let Some(input) = &self.input {
             if !state.has_event_link(input.link, input.event) {
@@ -159,22 +204,29 @@ impl From<&Transition> for TransEvent {
     }
 }
 
-struct Event {
+pub struct Event {
     event: usize,
     link: usize,
 }
 
-struct Link {
+impl Event {
+    pub fn new(event: usize, link: usize) -> Self {
+        Self { event, link }
+    }
+}
+
+pub struct Link {
     src: usize,
     dst: usize,
 }
 
-fn zeros<T>(count: usize) -> Vec<T>
-where
-    T: Default,
-{
-    (0..count).map(|_| T::default()).collect()
+impl Link {
+    pub fn new(src: usize, dst: usize) -> Self {
+        Self { src, dst }
+    }
 }
+
+
 
 #[cfg(test)]
 mod test {

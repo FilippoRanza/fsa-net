@@ -1,64 +1,74 @@
+use crate::utils::zeros;
+
 use std::collections::HashMap;
+type AdjList = Vec<Vec<usize>>;
 
 #[derive(Debug)]
-pub struct Graph<T> {
-    nodes: Vec<T>,
-    adjacent: Vec<Vec<usize>>,
+pub struct Graph {
+    nodes: Vec<NodeKind>,
+    adjacent: AdjList,
 }
 
-impl<T> Graph<T> {
-    fn export_graphviz(self) -> String {
+impl Graph {
+    pub fn export_graphviz(self) -> String {
         String::new()
     }
+
+    pub fn get_adjacent_list(&self) -> &AdjList {
+        &self.adjacent
+    }
+
+    pub fn get_node_kind_list(&self) -> &Vec<NodeKind> {
+        &self.nodes
+    }
 }
 
-pub struct GraphBuilder<T> {
-    nodes_index: HashMap<T, usize>,
-    nodes_list: Vec<Vec<usize>>,
+pub struct GraphBuilder {
+    nodes_list: Vec<(usize, usize)>,
+    node_kind: Vec<NodeKind>,
 }
 
-impl<T> GraphBuilder<T>
-where
-    T: Eq + std::hash::Hash,
-{
+impl GraphBuilder {
     pub fn new() -> Self {
         Self {
-            nodes_index: HashMap::new(),
             nodes_list: Vec::new(),
+            node_kind: Vec::new(),
         }
     }
 
-    pub fn add_node(&mut self, node: T) {
-        if let None = self.nodes_index.get(&node) {
-            let index = self.nodes_index.len();
-            self.nodes_index.insert(node, index);
-            self.nodes_list.push(Vec::new());
+    pub fn add_final_node(&mut self) {
+        self.add_node(NodeKind::Final);
+    }
+
+    pub fn add_simple_node(&mut self) {
+        self.add_node(NodeKind::Simple);
+    }
+
+    fn add_node(&mut self, kind: NodeKind) {
+        self.node_kind.push(kind);
+    }
+
+    pub fn add_arc(&mut self, src: usize, dst: usize) {
+        self.nodes_list.push((src, dst));
+    }
+
+    pub fn build_graph(self) -> Graph {
+        let mut adjacent: AdjList = zeros(self.node_kind.len());
+        for (s, d) in self.nodes_list.into_iter() {
+            adjacent[s].push(d);
         }
-    }
 
-    pub fn add_arc(&mut self, src: &T, dst: &T) {
-        let src = self.get_index(src);
-        let dst = self.get_index(dst);
-        self.nodes_list[src].push(dst);
-    }
-
-    pub fn get_index(&mut self, n: &T) -> usize {
-        if let Some(i) = self.nodes_index.get(n) {
-            *i
-        } else {
-            panic!("Call get_index on non existing node")
-        }
-    }
-
-    pub fn build_graph(self) -> Graph<T> {
-        let mut node_list: Vec<(T, usize)> = self.nodes_index.into_iter().collect();
-        node_list.sort_by_key(|(_, i)| *i);
-        let node_list = node_list.into_iter().map(|(n, _)| n).collect();
         Graph {
-            nodes: node_list,
-            adjacent: self.nodes_list,
+            nodes: self.node_kind,
+            adjacent,
         }
     }
+}
+
+#[derive(Debug)]
+pub enum NodeKind {
+    Simple,
+    Final,
 }
 
 #[cfg(test)]
@@ -71,8 +81,8 @@ mod test {
         let mut builder = GraphBuilder::new();
 
         let nodes = ['a', 'b', 'c', 'd', 'e'];
-        for node in &nodes {
-            builder.add_node(*node);
+        for _ in &nodes {
+            builder.add_simple_node();
         }
 
         let arcs = [
@@ -85,13 +95,19 @@ mod test {
             ('d', 'e'),
         ];
         for (s, d) in &arcs {
+            // terrible :-(
+            let s = nodes.iter().position(|n| n == s).unwrap();
+            let d = nodes.iter().position(|n| n == d).unwrap();
             builder.add_arc(s, d);
         }
 
         let graph = builder.build_graph();
 
-        for (i, n) in nodes.iter().enumerate() {
-            assert_eq!(graph.nodes[i], *n);
+        for (i, _) in nodes.iter().enumerate() {
+            match graph.nodes[i] {
+                NodeKind::Simple => {}
+                NodeKind::Final => panic!("NodeKind should be simple"),
+            }
         }
         assert_eq!(graph.nodes.len(), nodes.len());
         assert_eq!(graph.adjacent.len(), nodes.len());

@@ -7,6 +7,8 @@ mod engine;
 mod graph;
 mod input_output;
 mod network;
+mod state_table;
+mod utils;
 
 #[derive(StructOpt)]
 struct Arguments {

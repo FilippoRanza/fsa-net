@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 fsa-net-parser = { path = 'fsa-net-parser' }
+indexmap = "1.6.2"
 structopt = "0.3.21"
 
 [dev-dependencies]
