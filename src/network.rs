@@ -246,6 +246,28 @@ impl Link {
 mod test {
 
     use super::*;
+    use crate::compiler::compile;
+    use test_utils::load_code_from_file;
+    use fsa_net_parser::parse;
+
+    #[test]
+    fn test_compile() {
+        let src_code = load_code_from_file("simple-network");
+        let code = parse(&src_code).expect("`simple-network` should be syntactically correct");
+        let comp_res = compile(&code).expect("`simple-network` should be semantically correct");
+        let net = &comp_res[0].net;
+
+        assert_eq!(net.automata.len(), 2);
+        assert_eq!(net.links.len(), 2);
+
+        let init_state = net.get_initial_state();
+        assert_eq!(init_state.states, vec![1, 0]);
+
+
+
+    }
+
+
 
     #[test]
     fn test_initial_state() {

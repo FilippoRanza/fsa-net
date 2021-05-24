@@ -81,4 +81,16 @@ mod test {
             err => panic!("Expected GraphError, found: {:?}", err),
         }
     }
+
+
+
+    #[test]
+    fn test_compile() {
+        let src_code = load_code_from_file("simple-network");
+        let code = parse(&src_code).expect("`simple-network` should be syntactically correct");
+        let comp_res = compile(&code).expect("`simple-network` should be semantically correct");
+        assert_eq!(comp_res.len(), 1);
+    }
+
+
 }
