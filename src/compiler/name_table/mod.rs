@@ -4,6 +4,7 @@ mod name_error;
 mod name_table;
 mod name_table_factory;
 mod request_table;
+mod class_index;
 
 type Loc = (usize, usize);
 

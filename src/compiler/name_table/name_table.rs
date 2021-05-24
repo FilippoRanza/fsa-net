@@ -17,6 +17,7 @@ use crate::new_name_error;
 use super::name_class::NameClass;
 use super::request_table::{Request, RequestTable};
 use super::Loc;
+use super::class_index::ClassIndex;
 
 /**
  * This struct contain both the definition
@@ -283,7 +284,8 @@ impl<'a> GlobalNameTable<'a> {
                 let name_stat = name_stat.get_name_status();
                 let net_table = self.networks.get_mut(net).unwrap();
                 let stat = NameStatus::next(name_stat, stat);
-                let info = NetworkNameInfo { stat, class, loc };
+                let index = net_table.counter.get_count(class);
+                let info = NetworkNameInfo { stat, class, loc, index };
                 net_table.names.insert(name, info);
                 Ok(self)
             }
@@ -446,6 +448,7 @@ enum CollectionStatus<'a> {
 struct NetworkNameTable<'a> {
     loc: Loc,
     stat: NameStatus,
+    counter: ClassIndex<NetworkName>,
     names: HashMap<&'a str, NetworkNameInfo>,
     automata: HashMap<&'a str, AutomataNameTable<'a>>,
 }
@@ -455,6 +458,7 @@ impl<'a> NetworkNameTable<'a> {
         NetworkNameTable {
             loc,
             stat,
+            counter: ClassIndex::new(),
             names: HashMap::new(),
             automata: HashMap::new(),
         }
@@ -619,6 +623,7 @@ fn check_previous_definition<'a, T: Into<NameClass>>(
 struct NetworkNameInfo {
     stat: NameStatus,
     class: NetworkName,
+    index: usize,
     loc: Loc,
 }
 
@@ -628,7 +633,7 @@ impl<'a> NetworkNameInfo {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 enum NetworkName {
     Link,
     Event,
@@ -641,6 +646,7 @@ enum NetworkName {
 struct AutomataNameTable<'a> {
     names: HashMap<&'a str, AutomataInfo>,
     loc: Loc,
+    counter: ClassIndex<AutomataName>,
     name: &'a str,
 }
 
@@ -649,6 +655,7 @@ impl<'a> AutomataNameTable<'a> {
         AutomataNameTable {
             names: HashMap::new(),
             loc,
+            counter: ClassIndex::new(),
             name,
         }
     }
@@ -662,7 +669,8 @@ impl<'a> AutomataNameTable<'a> {
     }
 
     fn insert_name(&mut self, name: &'a str, loc: Loc, class: AutomataName, stat: NameStatus) {
-        let info = AutomataInfo { loc, class, stat };
+        let index = self.counter.get_count(class);
+        let info = AutomataInfo { loc, class, stat, index };
         self.names.insert(name, info);
     }
 
@@ -707,7 +715,7 @@ impl<'a> AutomataNameTable<'a> {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 enum AutomataName {
     State,
     Begin,
@@ -729,6 +737,7 @@ struct AutomataInfo {
     loc: Loc,
     class: AutomataName,
     stat: NameStatus,
+    index: usize
 }
 
 #[derive(Debug, Copy, Clone)]

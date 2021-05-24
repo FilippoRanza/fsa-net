@@ -2,7 +2,7 @@
  * The various type of entities definable
  * in fsa-lang
  */
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Hash)]
 pub enum NameClass {
     Network,
     Request,
@@ -14,3 +14,5 @@ pub enum NameClass {
     State,
     Transition,
 }
+
+pub const CLASS_COUNT: usize = 9;
