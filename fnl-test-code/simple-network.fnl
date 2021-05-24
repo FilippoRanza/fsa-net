@@ -31,8 +31,8 @@ network TestNetwork {
         }
 
         trans tb {
-            src a 
-            dst b
+            src b 
+            dst a
             input e3(L3)
         }
 

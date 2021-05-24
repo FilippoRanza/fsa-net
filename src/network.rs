@@ -263,6 +263,40 @@ mod test {
         let init_state = net.get_initial_state();
         assert_eq!(init_state.states, vec![1, 0]);
 
+        let link_a = &net.links[0];
+        assert_eq!(link_a.src, 1);
+        assert_eq!(link_a.dst, 0);
+
+
+        let link_b = &net.links[1];
+        assert_eq!(link_b.src, 0);
+        assert_eq!(link_b.dst, 1);
+
+        for (i, a) in net.automata.iter().enumerate() {
+            assert_eq!(a.index, i);
+        }
+
+        let auto_a = &net.automata[0];
+        assert_eq!(auto_a.adjacent_list.len(), 2);
+        assert_eq!(auto_a.begin, 1);
+        
+        let next_a_a = &auto_a.adjacent_list[0];
+        assert_eq!(next_a_a.len(), 1);
+
+        let next_a_b = &auto_a.adjacent_list[1];
+        assert_eq!(next_a_b.len(), 1);
+
+
+        let auto_b = &net.automata[1];
+        assert_eq!(auto_b.adjacent_list.len(), 2);
+        assert_eq!(auto_b.begin, 0);
+
+        let next_b_a = &auto_b.adjacent_list[0];
+        assert_eq!(next_b_a.len(), 1);
+
+        let next_b_b = &auto_b.adjacent_list[1];
+        assert_eq!(next_b_b.len(), 2);
+
 
 
     }
