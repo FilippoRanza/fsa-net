@@ -14,10 +14,10 @@ use std::collections::HashMap;
 use super::name_error::*;
 use crate::new_name_error;
 
+use super::class_index::ClassIndex;
 use super::name_class::NameClass;
 use super::request_table::{Request, RequestTable};
 use super::Loc;
-use super::class_index::ClassIndex;
 
 /**
  * This struct contain both the definition
@@ -187,6 +187,28 @@ impl<'a> GlobalNameTable<'a> {
         self.validate_network()?.validate_requests()
     }
 
+    pub fn get_network_name_index(&self, net_name: &str, item_name: &str) -> usize {
+        let net_table = self.networks.get(net_name).unwrap();
+        if let Some(item) = net_table.names.get(item_name) {
+            item.index
+        } else {
+            let automata = net_table.automata.get(item_name).unwrap();
+            automata.index
+        }
+    }
+
+    pub fn get_automata_name_index(
+        &self,
+        net_name: &str,
+        automata_name: &str,
+        item_name: &str,
+    ) -> usize {
+        let net_table = self.networks.get(net_name).unwrap();
+        let automata = net_table.automata.get(automata_name).unwrap();
+        let item = automata.names.get(item_name).unwrap();
+        item.index
+    }
+
     fn validate_network(self) -> GlobalNameResult<'a> {
         for (net_name, table) in self.networks.iter() {
             table.validate(net_name)?;
@@ -261,7 +283,8 @@ impl<'a> GlobalNameTable<'a> {
             net_table.names.remove(automata_name);
         }
         let net_table = self.networks.get_mut(net_name).unwrap();
-        let automata_table = AutomataNameTable::new(automata_name, loc);
+        let index = net_table.counter.get_count(NetworkName::Automata);
+        let automata_table = AutomataNameTable::new(automata_name, loc, index);
         net_table.automata.insert(automata_name, automata_table);
         self.status = CollectionStatus::Automata {
             net: net_name,
@@ -285,7 +308,12 @@ impl<'a> GlobalNameTable<'a> {
                 let net_table = self.networks.get_mut(net).unwrap();
                 let stat = NameStatus::next(name_stat, stat);
                 let index = net_table.counter.get_count(class);
-                let info = NetworkNameInfo { stat, class, loc, index };
+                let info = NetworkNameInfo {
+                    stat,
+                    class,
+                    loc,
+                    index,
+                };
                 net_table.names.insert(name, info);
                 Ok(self)
             }
@@ -635,6 +663,7 @@ impl<'a> NetworkNameInfo {
 
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 enum NetworkName {
+    Automata,
     Link,
     Event,
     ObsLabel,
@@ -646,15 +675,17 @@ enum NetworkName {
 struct AutomataNameTable<'a> {
     names: HashMap<&'a str, AutomataInfo>,
     loc: Loc,
+    index: usize,
     counter: ClassIndex<AutomataName>,
     name: &'a str,
 }
 
 impl<'a> AutomataNameTable<'a> {
-    fn new(name: &'a str, loc: Loc) -> Self {
+    fn new(name: &'a str, loc: Loc, index: usize) -> Self {
         AutomataNameTable {
             names: HashMap::new(),
             loc,
+            index,
             counter: ClassIndex::new(),
             name,
         }
@@ -670,7 +701,12 @@ impl<'a> AutomataNameTable<'a> {
 
     fn insert_name(&mut self, name: &'a str, loc: Loc, class: AutomataName, stat: NameStatus) {
         let index = self.counter.get_count(class);
-        let info = AutomataInfo { loc, class, stat, index };
+        let info = AutomataInfo {
+            loc,
+            class,
+            stat,
+            index,
+        };
         self.names.insert(name, info);
     }
 
@@ -737,7 +773,7 @@ struct AutomataInfo {
     loc: Loc,
     class: AutomataName,
     stat: NameStatus,
-    index: usize
+    index: usize,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -799,6 +835,7 @@ impl From<&NetworkName> for NameClass {
             NetworkName::Link => Self::Link,
             NetworkName::ObsLabel => Self::ObsLabel,
             NetworkName::RelLabel => Self::RelLabel,
+            NetworkName::Automata => unreachable!(),
         }
     }
 }

@@ -7,9 +7,9 @@ pub struct State {
 }
 
 impl State {
-    pub fn initial(automata_count: usize, link_count: usize) -> Self {
+    pub fn initial(states: Vec<usize>, link_count: usize) -> Self {
         Self {
-            states: zeros(automata_count),
+            states,
             links: zeros(link_count),
         }
     }
@@ -56,7 +56,7 @@ impl State {
         }
     }
 }
-
+#[derive(Debug)]
 pub struct Network {
     automata: Vec<Automata>,
     links: Vec<Link>,
@@ -68,7 +68,7 @@ impl Network {
     }
 
     pub fn get_initial_state(&self) -> State {
-        State::initial(self.automata.len(), self.links.len())
+        State::initial(self.get_automata_initial_state(), self.links.len())
     }
 
     pub fn step_one(&self, state: &State) -> Vec<(TransEvent, State)> {
@@ -79,18 +79,27 @@ impl Network {
         }
         output
     }
+
+
+    fn get_automata_initial_state(&self) -> Vec<usize> {
+        self.automata.iter().map(|a| a.get_initial_state()).collect()
+    }
+
 }
 
+#[derive(Debug)]
 pub struct Automata {
     adjacent_list: Vec<Vec<Adjacent>>,
     index: usize,
+    begin: usize
 }
 
 impl Automata {
-    pub fn new(index: usize, adjacent_list: Vec<Vec<Adjacent>>) -> Self {
+    pub fn new(begin: usize, index: usize, adjacent_list: Vec<Vec<Adjacent>>) -> Self {
         Self {
             adjacent_list,
             index,
+            begin
         }
     }
 
@@ -107,8 +116,13 @@ impl Automata {
         }
         output
     }
+
+    fn get_initial_state(&self) -> usize {
+        self.begin
+    }
 }
 
+#[derive(Debug)]
 pub struct Adjacent {
     state: usize,
     trans: Transition,
@@ -120,7 +134,7 @@ impl Adjacent {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Transition {
     input: Option<Event>,
     output: Option<Vec<Event>>,
@@ -204,6 +218,7 @@ impl From<&Transition> for TransEvent {
     }
 }
 
+#[derive(Debug)]
 pub struct Event {
     event: usize,
     link: usize,
@@ -215,6 +230,7 @@ impl Event {
     }
 }
 
+#[derive(Debug)]
 pub struct Link {
     src: usize,
     dst: usize,
@@ -226,8 +242,6 @@ impl Link {
     }
 }
 
-
-
 #[cfg(test)]
 mod test {
 
@@ -235,13 +249,13 @@ mod test {
 
     #[test]
     fn test_initial_state() {
-        let initial = State::initial(4, 1);
+        let initial = State::initial(zeros(4), 1);
         assert!(initial.is_final());
     }
 
     #[test]
     fn test_enabled_transition() {
-        let state = State::initial(3, 2).fill_link(1, 3);
+        let state = State::initial(zeros(3), 2).fill_link(1, 3);
         let trans = Transition {
             input: Some(Event { event: 3, link: 1 }),
             output: None,
@@ -269,7 +283,7 @@ mod test {
 
     #[test]
     fn test_apply_transition() {
-        let state = State::initial(3, 2).fill_link(1, 3);
+        let state = State::initial(zeros(3), 2).fill_link(1, 3);
 
         let in_link = 1;
         let out_link = 0;
@@ -319,13 +333,14 @@ mod test {
 
         let automata = Automata::new(
             0,
+            0,
             vec![vec![Adjacent {
                 state: 1,
                 trans: trans,
             }]],
         );
 
-        let state = State::initial(1, 2).fill_link(1, 3);
+        let state = State::initial(zeros(1), 2).fill_link(1, 3);
 
         let next = automata.step_one(&state);
         assert_eq!(next.len(), 1);

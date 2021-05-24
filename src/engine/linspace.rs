@@ -50,6 +50,7 @@ mod test {
 
         let auto_a = network::Automata::new(
             0,
+            0,
             vec![
                 vec![network::Adjacent::new(1, trans_a_a)],
                 vec![network::Adjacent::new(0, trans_b_a)],
@@ -61,6 +62,7 @@ mod test {
         let trans_c_b = network::Transition::new().set_input(network::Event::new(1, 1));
 
         let auto_b = network::Automata::new(
+            0,
             1,
             vec![
                 vec![network::Adjacent::new(1, trans_a_b)],
@@ -81,24 +83,23 @@ mod test {
         let adjacent_list = graph.get_adjacent_list();
         assert_eq!(adjacent_list.len(), 15);
         let expected = vec![
-            vec![1],        // 0
-            vec![2],        // 1
-            vec![3, 4],     // 2
-            vec![7, 8],     // 3
-            vec![5],        // 4
-            vec![0, 6],     // 5
-            vec![],         // 6
-            vec![9],        // 7
-            vec![9],        // 8
-            vec![10, 1],    // 9
-            vec![11],       // 10
-            vec![12],       // 11
-            vec![13, 8],    // 12
-            vec![14],       // 13
-            vec![]          // 14
+            vec![1],     // 0
+            vec![2],     // 1
+            vec![3, 4],  // 2
+            vec![7, 8],  // 3
+            vec![5],     // 4
+            vec![0, 6],  // 5
+            vec![],      // 6
+            vec![9],     // 7
+            vec![9],     // 8
+            vec![10, 1], // 9
+            vec![11],    // 10
+            vec![12],    // 11
+            vec![13, 8], // 12
+            vec![14],    // 13
+            vec![],      // 14
         ];
 
         assert_eq!(adjacent_list, &expected);
-
     }
 }
