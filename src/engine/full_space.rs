@@ -4,7 +4,12 @@ use crate::state_table;
 
 use std::collections::VecDeque;
 
-pub fn compute_full_space(net: &network::Network) -> graph::Graph {
+pub struct FullSpaceResult {
+    pub graph: graph::Graph,
+}
+
+
+pub fn compute_full_space(net: &network::Network) -> FullSpaceResult {
     let mut builder = graph::GraphBuilder::new();
     let mut table = state_table::StateTable::new();
     let mut stack = VecDeque::new();
@@ -33,8 +38,18 @@ pub fn compute_full_space(net: &network::Network) -> graph::Graph {
         }
     }
 
-    builder.build_graph()
+    let graph = builder.build_graph();
+    FullSpaceResult {
+        graph
+    }
 }
+
+impl Into<super::NetworkResult> for FullSpaceResult {
+    fn into(self) -> super::NetworkResult {
+        super::NetworkResult::FullSpace(self)
+    }
+}
+
 
 #[cfg(test)]
 mod test {
@@ -78,9 +93,9 @@ mod test {
             vec![network::Link::new(1, 0), network::Link::new(0, 1)],
         );
 
-        let graph = compute_full_space(&net);
+        let result = compute_full_space(&net);
 
-        let adjacent_list = graph.get_adjacent_list();
+        let adjacent_list = result.graph.get_adjacent_list();
         assert_eq!(adjacent_list.len(), 15);
         let expected = vec![
             vec![1],     // 0

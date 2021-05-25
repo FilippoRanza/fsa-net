@@ -18,7 +18,7 @@ struct Arguments {
 
 fn run_request(cmds: Vec<compiler::CompileResult>) {
     for cmd in &cmds {
-        engine::run(&cmd.net, &cmd.req)
+        engine::run(&cmd.net, &cmd.req);
     }
 }
 
