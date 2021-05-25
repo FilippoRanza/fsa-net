@@ -48,3 +48,6 @@ network TestNetwork {
 
 }
 
+request TestNetwork {
+    space
+}

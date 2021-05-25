@@ -18,9 +18,7 @@ struct Arguments {
 
 fn run_request(cmds: Vec<compiler::CompileResult>) {
     for cmd in &cmds {
-        if let Some(req) = &cmd.req {
-            engine::run(&cmd.net, req)
-        }
+        engine::run(&cmd.net, &cmd.req)
     }
 }
 

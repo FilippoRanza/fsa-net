@@ -12,7 +12,7 @@ use super::command;
 #[derive(Debug)]
 pub struct CompileResult {
     pub net: network::Network,
-    pub req: Option<command::Requests>
+    pub req: command::Requests
 }
 
 pub use compiler::compile;
