@@ -9,7 +9,8 @@ pub fn export_results(results: Vec<NetworkResult>) -> String {
 
 fn export_result(result: NetworkResult) -> String {
     match result {
-        NetworkResult::FullSpace(full_space) => export_full_space(full_space)
+        NetworkResult::FullSpace(full_space) => export_full_space(full_space),
+        NetworkResult::Linspace(_) => unimplemented!()
     }
 }
 
