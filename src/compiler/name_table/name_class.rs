@@ -14,5 +14,3 @@ pub enum NameClass {
     State,
     Transition,
 }
-
-pub const CLASS_COUNT: usize = 9;
