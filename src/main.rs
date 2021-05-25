@@ -2,6 +2,7 @@ use fsa_net_parser;
 use std::path;
 use structopt::StructOpt;
 
+mod command;
 mod compiler;
 mod engine;
 mod graph;
@@ -9,7 +10,6 @@ mod input_output;
 mod network;
 mod state_table;
 mod utils;
-mod command;
 
 #[derive(StructOpt)]
 struct Arguments {

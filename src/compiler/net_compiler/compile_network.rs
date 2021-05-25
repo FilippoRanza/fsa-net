@@ -1,21 +1,34 @@
-use super::compiler_utils;
-use super::name_table::GlobalNameTable;
-use super::CompileResult;
+use super::super::name_table::GlobalNameTable;
+use super::super::CompileResult;
+use super::graph_builder;
+use super::result_builder::{ItemType, ResultBuilder};
+use crate::command;
 
 use crate::network;
-use crate::utils::zeros;
 
 use fsa_net_parser::syntax_tree;
 use fsa_net_parser::Code;
 
 pub fn compile_networks(code: &Code, table: &GlobalNameTable) -> Vec<CompileResult> {
     code.iter()
-        .filter_map(compiler_utils::is_network)
-        .map(|net| compile_network(net, table))
-        .collect()
+        .map(|blk| compile_block(blk, table))
+        .fold(ResultBuilder::new(), |builder, (name, item)| {
+            builder.insert_node(name, item)
+        })
+        .build_result()
 }
 
-fn compile_network(net: &syntax_tree::Network, table: &GlobalNameTable) -> CompileResult {
+fn compile_block<'a>(
+    block: &'a syntax_tree::Block,
+    table: &GlobalNameTable,
+) -> (&'a str, ItemType) {
+    match block {
+        syntax_tree::Block::Network(net) => (net.name, compile_network(net, table).into()),
+        syntax_tree::Block::Request(req) => (req.name, command::Command::FullSpace.into()),
+    }
+}
+
+fn compile_network(net: &syntax_tree::Network, table: &GlobalNameTable) -> network::Network {
     let mut automata_list = Vec::new();
     let mut link_list = Vec::new();
 
@@ -32,8 +45,7 @@ fn compile_network(net: &syntax_tree::Network, table: &GlobalNameTable) -> Compi
             _ => {}
         }
     }
-    let network = network::Network::new(automata_list, link_list);
-    CompileResult { net: network }
+    network::Network::new(automata_list, link_list)
 }
 
 fn compile_automata(
@@ -41,7 +53,7 @@ fn compile_automata(
     table: &GlobalNameTable,
     net_name: &str,
 ) -> network::Automata {
-    let mut builder = GraphBuilder::new();
+    let mut builder = graph_builder::GraphBuilder::new();
     let mut begin = 0;
     for decl in &auto_decl.params {
         match &decl.param {
@@ -66,7 +78,7 @@ fn compile_transition(
     table: &GlobalNameTable,
     net_name: &str,
     auto_name: &str,
-    builder: &mut GraphBuilder,
+    builder: &mut graph_builder::GraphBuilder,
 ) {
     let src_state = table.get_automata_name_index(net_name, auto_name, trans.source);
     let dst_state = table.get_automata_name_index(net_name, auto_name, trans.destination);
@@ -124,45 +136,4 @@ fn compile_link(
     let src = table.get_network_name_index(net_name, decl.source);
     let dst = table.get_network_name_index(net_name, decl.destination);
     network::Link::new(src, dst)
-}
-
-struct GraphBuilder {
-    node_count: usize,
-    arc_list: Vec<(usize, usize, network::Transition)>,
-}
-
-impl GraphBuilder {
-    fn new() -> Self {
-        Self {
-            node_count: 0,
-            arc_list: Vec::new(),
-        }
-    }
-
-    fn add_arc(&mut self, src: usize, dst: usize, trans: network::Transition) {
-        self.node_count = self.get_node_count(src, dst);
-        let tmp = (src, dst, trans);
-        self.arc_list.push(tmp);
-    }
-
-    fn build_graph(self) -> Vec<Vec<network::Adjacent>> {
-        let mut output: Vec<Vec<network::Adjacent>> = zeros(self.node_count);
-
-        for (src, dst, trans) in self.arc_list.into_iter() {
-            let adj = network::Adjacent::new(dst, trans);
-            output[src].push(adj);
-        }
-
-        output
-    }
-
-    fn get_node_count(&self, src: usize, dst: usize) -> usize {
-        let max = if src > dst { src } else { dst };
-
-        if max >= self.node_count {
-            max + 1
-        } else {
-            self.node_count
-        }
-    }
 }

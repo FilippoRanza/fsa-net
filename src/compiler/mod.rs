@@ -1,10 +1,10 @@
 mod automata_connection;
-mod compile_network;
 mod compiler;
 mod compiler_utils;
 mod error;
 mod link_connection;
 mod name_table;
+mod net_compiler;
 
 use super::network;
 

@@ -1,8 +1,8 @@
 use super::automata_connection;
-use super::compile_network;
 use super::error;
 use super::link_connection;
 use super::name_table;
+use super::net_compiler;
 use super::CompileResult;
 
 use fsa_net_parser::Code;
@@ -11,7 +11,7 @@ pub fn compile<'a>(code: &'a Code<'a>) -> Result<Vec<CompileResult>, error::Comp
     let table = name_table::build_name_table(code)?;
     automata_connection::check_connection(code)?;
     link_connection::link_check(code)?;
-    let comp_res = compile_network::compile_networks(code, &table);
+    let comp_res = net_compiler::compile_networks(code, &table);
     Ok(comp_res)
 }
 
