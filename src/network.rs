@@ -80,18 +80,19 @@ impl Network {
         output
     }
 
-
     fn get_automata_initial_state(&self) -> Vec<usize> {
-        self.automata.iter().map(|a| a.get_initial_state()).collect()
+        self.automata
+            .iter()
+            .map(|a| a.get_initial_state())
+            .collect()
     }
-
 }
 
 #[derive(Debug, PartialEq)]
 pub struct Automata {
     adjacent_list: Vec<Vec<Adjacent>>,
     index: usize,
-    begin: usize
+    begin: usize,
 }
 
 impl Automata {
@@ -99,7 +100,7 @@ impl Automata {
         Self {
             adjacent_list,
             index,
-            begin
+            begin,
         }
     }
 
@@ -247,8 +248,8 @@ mod test {
 
     use super::*;
     use crate::compiler::compile;
-    use test_utils::load_code_from_file;
     use fsa_net_parser::parse;
+    use test_utils::load_code_from_file;
 
     #[test]
     fn test_compile() {
@@ -280,24 +281,14 @@ mod test {
             1,
             vec![
                 vec![Adjacent::new(1, trans_a_b)],
-                vec![
-                    Adjacent::new(0, trans_b_b),
-                    Adjacent::new(1, trans_c_b),
-                ],
+                vec![Adjacent::new(0, trans_b_b), Adjacent::new(1, trans_c_b)],
             ],
         );
 
-        let expect_net = Network::new(
-            vec![auto_a, auto_b],
-            vec![Link::new(1, 0), Link::new(0, 1)],
-        );
-
+        let expect_net = Network::new(vec![auto_a, auto_b], vec![Link::new(1, 0), Link::new(0, 1)]);
 
         assert_eq!(&expect_net, net);
-
     }
-
-
 
     #[test]
     fn test_initial_state() {

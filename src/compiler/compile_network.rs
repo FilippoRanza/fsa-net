@@ -48,9 +48,11 @@ fn compile_automata(
             syntax_tree::AutomataParameter::StateDecl(state) => {
                 if let syntax_tree::StateDeclaration::Begin(name) = state {
                     begin = table.get_automata_name_index(net_name, auto_decl.name, name);
-                } 
+                }
             }
-            syntax_tree::AutomataParameter::Transition(trans) => compile_transition(trans, table, net_name, auto_decl.name, &mut builder)
+            syntax_tree::AutomataParameter::Transition(trans) => {
+                compile_transition(trans, table, net_name, auto_decl.name, &mut builder)
+            }
         }
     }
 
@@ -164,5 +166,3 @@ impl GraphBuilder {
         }
     }
 }
-
-

@@ -82,8 +82,6 @@ mod test {
         }
     }
 
-
-
     #[test]
     fn test_compile() {
         let src_code = load_code_from_file("simple-network");
@@ -91,6 +89,4 @@ mod test {
         let comp_res = compile(&code).expect("`simple-network` should be semantically correct");
         assert_eq!(comp_res.len(), 1);
     }
-
-
 }

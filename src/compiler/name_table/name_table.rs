@@ -78,20 +78,22 @@ impl<'a> GlobalNameTable<'a> {
     }
 
     pub fn declare_rel_label(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
-        let output = self.insert_network_name(name, NetworkName::RelLabel, loc, NameStatus::Defined)?;
+        let output =
+            self.insert_network_name(name, NetworkName::RelLabel, loc, NameStatus::Defined)?;
         Ok(output.set_network_index(name))
     }
 
     pub fn declare_obs_label(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
-        let output = self.insert_network_name(name, NetworkName::ObsLabel, loc, NameStatus::Defined)?;
+        let output =
+            self.insert_network_name(name, NetworkName::ObsLabel, loc, NameStatus::Defined)?;
         Ok(output.set_network_index(name))
     }
 
     pub fn declare_event(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
-        let output = self.insert_network_name(name, NetworkName::Event, loc, NameStatus::Defined)?;
+        let output =
+            self.insert_network_name(name, NetworkName::Event, loc, NameStatus::Defined)?;
         Ok(output.set_network_index(name))
     }
-
 
     fn set_network_index(mut self, name: &'a str) -> Self {
         if let CollectionStatus::Network(net_name) = self.status {
@@ -107,22 +109,25 @@ impl<'a> GlobalNameTable<'a> {
     }
 
     pub fn declare_begin(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
-        let output = self.insert_automata_name(name, loc, AutomataName::Begin, NameStatus::Defined)?;
+        let output =
+            self.insert_automata_name(name, loc, AutomataName::Begin, NameStatus::Defined)?;
         Ok(output.set_automata_index(name))
     }
 
     pub fn declare_state(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
-        let output = self.insert_automata_name(name, loc, AutomataName::State, NameStatus::Defined)?;
+        let output =
+            self.insert_automata_name(name, loc, AutomataName::State, NameStatus::Defined)?;
         Ok(output.set_automata_index(name))
     }
 
     pub fn declare_transition(self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
-        let output = self.insert_automata_name(name, loc, AutomataName::Transition, NameStatus::Defined)?;
+        let output =
+            self.insert_automata_name(name, loc, AutomataName::Transition, NameStatus::Defined)?;
         Ok(output.set_automata_index(name))
     }
 
     fn set_automata_index(mut self, name: &'a str) -> Self {
-        if let CollectionStatus::Automata{net, automata} = self.status {
+        if let CollectionStatus::Automata { net, automata } = self.status {
             let net_table = self.networks.get_mut(net).unwrap();
             let auto_table = net_table.automata.get_mut(automata).unwrap();
             auto_table.set_index(name);
@@ -131,7 +136,6 @@ impl<'a> GlobalNameTable<'a> {
             panic!("call `set_automata_index` outside automata block");
         }
     }
-
 
     pub fn insert_request(mut self, name: &'a str, loc: Loc) -> GlobalNameResult<'a> {
         if let Some(prev) = self.requests.get(name) {
@@ -344,14 +348,13 @@ impl<'a> GlobalNameTable<'a> {
                     info.stat = stat;
                     info.loc = loc;
                 } else {
-                 
                     let info = NetworkNameInfo {
                         stat,
                         class,
                         loc,
                         index: 0,
                     };
-                    net_table.names.insert(name, info);   
+                    net_table.names.insert(name, info);
                 }
                 Ok(self)
             }
@@ -800,7 +803,7 @@ impl<'a> AutomataNameTable<'a> {
     }
 }
 
-#[derive(Debug,  Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 enum AutomataName {
     State,
     Begin,
@@ -809,7 +812,7 @@ enum AutomataName {
 
 impl PartialEq for AutomataName {
     fn eq(&self, other: &Self) -> bool {
-        match (self, other)  {
+        match (self, other) {
             (Self::Transition, Self::Transition) => true,
             (Self::Begin, Self::Begin) => true,
             (Self::Begin, Self::State) => true,
@@ -820,19 +823,17 @@ impl PartialEq for AutomataName {
     }
 }
 
-
 impl Eq for AutomataName {}
 
 impl std::hash::Hash for AutomataName {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         let val = match self {
             Self::State | Self::Begin => 0,
-            _ => 1
+            _ => 1,
         };
         state.write(&[val])
     }
 }
-
 
 impl AutomataName {
     fn next(prev: Self, curr: Self) -> Self {
