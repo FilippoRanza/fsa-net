@@ -9,6 +9,7 @@ mod input_output;
 mod network;
 mod state_table;
 mod utils;
+mod command;
 
 #[derive(StructOpt)]
 struct Arguments {
@@ -19,5 +20,5 @@ fn main() {
     let args = Arguments::from_args();
     let src_code = input_output::get_fsa_code(&args.file).unwrap();
     let code = fsa_net_parser::parse(&src_code).unwrap();
-    let _ = compiler::compile(&code).unwrap();
+    let compile_result = compiler::compile(&code).unwrap();
 }
