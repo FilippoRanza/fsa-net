@@ -7,10 +7,12 @@ mod name_table;
 mod net_compiler;
 
 use super::network;
+use super::command;
 
 #[derive(Debug)]
 pub struct CompileResult {
     pub net: network::Network,
+    pub req: Option<command::Requests>
 }
 
 pub use compiler::compile;

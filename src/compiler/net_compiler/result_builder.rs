@@ -36,7 +36,7 @@ impl<'a> ResultBuilder<'a> {
         };
 
         match item.into() {
-            ItemType::Command(cmd) => store.req = Some(cmd),
+            ItemType::Requests(cmd) => store.req = Some(cmd),
             ItemType::Network(net) => store.net = Some(net),
         }
         self
@@ -45,7 +45,7 @@ impl<'a> ResultBuilder<'a> {
 
 pub enum ItemType {
     Network(network::Network),
-    Command(command::Command),
+    Requests(command::Requests),
 }
 
 impl Into<ItemType> for network::Network {
@@ -54,16 +54,16 @@ impl Into<ItemType> for network::Network {
     }
 }
 
-impl Into<ItemType> for command::Command {
+impl Into<ItemType> for command::Requests {
     fn into(self) -> ItemType {
-        ItemType::Command(self)
+        ItemType::Requests(self)
     }
 }
 
 #[derive(Default)]
 struct CompileStorage {
     net: Option<network::Network>,
-    req: Option<command::Command>,
+    req: Option<command::Requests>,
     index: usize,
 }
 
@@ -80,6 +80,7 @@ impl Into<CompileResult> for CompileStorage {
     fn into(self) -> CompileResult {
         CompileResult {
             net: self.net.unwrap(),
+            req: self.req
         }
     }
 }
