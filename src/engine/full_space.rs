@@ -4,7 +4,7 @@ use crate::state_table;
 
 use std::collections::VecDeque;
 
-fn compute_linspace(net: &network::Network) -> graph::Graph {
+pub fn compute_full_space(net: &network::Network) -> graph::Graph {
     let mut builder = graph::GraphBuilder::new();
     let mut table = state_table::StateTable::new();
     let mut stack = VecDeque::new();
@@ -78,7 +78,7 @@ mod test {
             vec![network::Link::new(1, 0), network::Link::new(0, 1)],
         );
 
-        let graph = compute_linspace(&net);
+        let graph = compute_full_space(&net);
 
         let adjacent_list = graph.get_adjacent_list();
         assert_eq!(adjacent_list.len(), 15);
