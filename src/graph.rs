@@ -112,9 +112,9 @@ mod test {
         assert_eq!(graph.adjacent.len(), nodes.len());
 
         assert_eq!(graph.adjacent[0], vec![2, 3, 1]);
-        assert_eq!(graph.adjacent[1], vec![]);
+        assert_eq!(graph.adjacent[1], Vec::<usize>::new());
         assert_eq!(graph.adjacent[2], vec![1, 3]);
         assert_eq!(graph.adjacent[3], vec![1, 4]);
-        assert_eq!(graph.adjacent[4], vec![]);
+        assert_eq!(graph.adjacent[4], Vec::<usize>::new());
     }
 }

@@ -10,6 +10,7 @@ mod input_output;
 mod network;
 mod state_table;
 mod utils;
+mod export_results;
 
 #[derive(StructOpt)]
 struct Arguments {
@@ -18,7 +19,9 @@ struct Arguments {
 
 fn run_request(cmds: Vec<compiler::CompileResult>) {
     for cmd in &cmds {
-        engine::run(&cmd.net, &cmd.req);
+        let res = engine::run(&cmd.net, &cmd.req);
+        let res = export_results::export_results(res);
+        println!("{}", res);
     }
 }
 
