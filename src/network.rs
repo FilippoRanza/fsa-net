@@ -56,7 +56,7 @@ impl State {
         }
     }
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Network {
     automata: Vec<Automata>,
     links: Vec<Link>,
@@ -87,7 +87,7 @@ impl Network {
 
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Automata {
     adjacent_list: Vec<Vec<Adjacent>>,
     index: usize,
@@ -122,7 +122,7 @@ impl Automata {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Adjacent {
     state: usize,
     trans: Transition,
@@ -134,7 +134,7 @@ impl Adjacent {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, PartialEq)]
 pub struct Transition {
     input: Option<Event>,
     output: Option<Vec<Event>>,
@@ -218,7 +218,7 @@ impl From<&Transition> for TransEvent {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Event {
     event: usize,
     link: usize,
@@ -230,7 +230,7 @@ impl Event {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Link {
     src: usize,
     dst: usize,
@@ -257,47 +257,43 @@ mod test {
         let comp_res = compile(&code).expect("`simple-network` should be semantically correct");
         let net = &comp_res[0].net;
 
-        assert_eq!(net.automata.len(), 2);
-        assert_eq!(net.links.len(), 2);
+        let trans_a_a = Transition::new()
+            .set_input(Event::new(0, 0))
+            .add_output(Event::new(1, 1));
+        let trans_b_a = Transition::new().add_output(Event::new(1, 1));
 
-        let init_state = net.get_initial_state();
-        assert_eq!(init_state.states, vec![1, 0]);
+        let auto_a = Automata::new(
+            1,
+            0,
+            vec![
+                vec![Adjacent::new(1, trans_b_a)],
+                vec![Adjacent::new(0, trans_a_a)],
+            ],
+        );
 
-        let link_a = &net.links[0];
-        assert_eq!(link_a.src, 1);
-        assert_eq!(link_a.dst, 0);
+        let trans_a_b = Transition::new().add_output(Event::new(0, 0));
+        let trans_b_b = Transition::new().set_input(Event::new(1, 1));
+        let trans_c_b = Transition::new().set_input(Event::new(1, 1));
 
+        let auto_b = Automata::new(
+            0,
+            1,
+            vec![
+                vec![Adjacent::new(1, trans_a_b)],
+                vec![
+                    Adjacent::new(0, trans_b_b),
+                    Adjacent::new(1, trans_c_b),
+                ],
+            ],
+        );
 
-        let link_b = &net.links[1];
-        assert_eq!(link_b.src, 0);
-        assert_eq!(link_b.dst, 1);
-
-        for (i, a) in net.automata.iter().enumerate() {
-            assert_eq!(a.index, i);
-        }
-
-        let auto_a = &net.automata[0];
-        assert_eq!(auto_a.adjacent_list.len(), 2);
-        assert_eq!(auto_a.begin, 1);
-        
-        let next_a_a = &auto_a.adjacent_list[0];
-        assert_eq!(next_a_a.len(), 1);
-
-        let next_a_b = &auto_a.adjacent_list[1];
-        assert_eq!(next_a_b.len(), 1);
-
-
-        let auto_b = &net.automata[1];
-        assert_eq!(auto_b.adjacent_list.len(), 2);
-        assert_eq!(auto_b.begin, 0);
-
-        let next_b_a = &auto_b.adjacent_list[0];
-        assert_eq!(next_b_a.len(), 1);
-
-        let next_b_b = &auto_b.adjacent_list[1];
-        assert_eq!(next_b_b.len(), 2);
+        let expect_net = Network::new(
+            vec![auto_a, auto_b],
+            vec![Link::new(1, 0), Link::new(0, 1)],
+        );
 
 
+        assert_eq!(&expect_net, net);
 
     }
 
