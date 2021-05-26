@@ -5,9 +5,6 @@ use crate::network;
 
 use fsa_net_parser::syntax_tree;
 
-
-
-
 pub fn compile_network(net: &syntax_tree::Network, table: &GlobalNameTable) -> network::Network {
     let mut automata_list = Vec::new();
     let mut link_list = Vec::new();

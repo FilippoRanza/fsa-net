@@ -10,7 +10,6 @@ pub struct FullSpaceResult {
     pub graph: graph::Graph,
 }
 
-
 pub fn compute_full_space(net: &network::Network) -> FullSpaceResult {
     let mut builder = graph::GraphBuilder::new();
     let mut table = state_table::StateTable::new();
@@ -21,9 +20,9 @@ pub fn compute_full_space(net: &network::Network) -> FullSpaceResult {
     while let Some(state_index) = stack.pop_front() {
         let curr_state = table.get_object(state_index);
         if curr_state.is_final() {
-            builder.add_final_node();
+            builder.add_final_node(state_index);
         } else {
-            builder.add_simple_node();
+            builder.add_simple_node(state_index);
         }
 
         let next_state = net.step_one(curr_state);
@@ -34,9 +33,7 @@ pub fn compute_full_space(net: &network::Network) -> FullSpaceResult {
     }
 
     let graph = builder.build_graph();
-    FullSpaceResult {
-        graph
-    }
+    FullSpaceResult { graph }
 }
 
 impl Into<super::NetworkResult> for FullSpaceResult {
@@ -45,23 +42,20 @@ impl Into<super::NetworkResult> for FullSpaceResult {
     }
 }
 
-
 #[cfg(test)]
 mod test {
 
     use super::*;
-    use test_utils::load_code_from_file;
-    use fsa_net_parser::parse;
     use crate::compiler::compile;
+    use fsa_net_parser::parse;
+    use test_utils::load_code_from_file;
 
     #[test]
     fn test_full_space() {
-        
         let src_code = load_code_from_file("simple-network");
         let code = parse(&src_code).expect("`simple-network` should be syntactically correct");
         let comp_res = compile(&code).expect("`simple-network` should be semantically correct");
         let net = &comp_res[0].net;
-
 
         let result = compute_full_space(&net);
 

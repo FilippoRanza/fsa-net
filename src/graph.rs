@@ -24,7 +24,7 @@ impl Graph {
 
 pub struct GraphBuilder {
     nodes_list: Vec<(usize, usize)>,
-    node_kind: Vec<NodeKind>,
+    node_kind: Vec<(usize, NodeKind)>,
 }
 
 impl GraphBuilder {
@@ -35,36 +35,34 @@ impl GraphBuilder {
         }
     }
 
-    pub fn add_final_node(&mut self) {
-        self.add_node(NodeKind::Final);
+    pub fn add_final_node(&mut self, index: usize) {
+        self.add_node(index, NodeKind::Final);
     }
 
-    pub fn add_simple_node(&mut self) {
-        self.add_node(NodeKind::Simple);
+    pub fn add_simple_node(&mut self, index: usize) {
+        self.add_node(index, NodeKind::Simple);
     }
 
-    fn add_node(&mut self, kind: NodeKind) {
-        self.node_kind.push(kind);
+    fn add_node(&mut self, index: usize, kind: NodeKind) {
+        self.node_kind.push((index, kind));
     }
 
     pub fn add_arc(&mut self, src: usize, dst: usize) {
         self.nodes_list.push((src, dst));
     }
 
-    pub fn build_graph(self) -> Graph {
+    pub fn build_graph(mut self) -> Graph {
         let mut adjacent: AdjList = zeros(self.node_kind.len());
         for (s, d) in self.nodes_list.into_iter() {
             adjacent[s].push(d);
         }
-
-        Graph {
-            nodes: self.node_kind,
-            adjacent,
-        }
+        self.node_kind.sort_by_key(|(i, _)| *i);
+        let nodes = self.node_kind.into_iter().map(|(_, i)| i).collect();
+        Graph { nodes, adjacent }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum NodeKind {
     Simple,
     Final,
@@ -80,8 +78,8 @@ mod test {
         let mut builder = GraphBuilder::new();
 
         let nodes = ['a', 'b', 'c', 'd', 'e'];
-        for _ in &nodes {
-            builder.add_simple_node();
+        for (i, _) in nodes.iter().enumerate() {
+            builder.add_simple_node(i);
         }
 
         let arcs = [

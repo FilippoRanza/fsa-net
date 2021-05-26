@@ -6,13 +6,13 @@ mod link_connection;
 mod name_table;
 mod net_compiler;
 
-use super::network;
 use super::command;
+use super::network;
 
 #[derive(Debug)]
 pub struct CompileResult {
     pub net: network::Network,
-    pub req: command::Requests
+    pub req: command::Requests,
 }
 
 pub use compiler::compile;

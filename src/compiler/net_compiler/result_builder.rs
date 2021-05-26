@@ -19,7 +19,10 @@ impl<'a> ResultBuilder<'a> {
     pub fn build_result(self) -> Vec<CompileResult> {
         let mut store: Vec<CompileStorage> = self.results.into_iter().map(|(_, v)| v).collect();
         store.sort_by_key(|s| s.index);
-        store.into_iter().filter_map(|s| s.get_compile_result()).collect()
+        store
+            .into_iter()
+            .filter_map(|s| s.get_compile_result())
+            .collect()
     }
 
     pub fn insert_node<T>(mut self, name: &'a str, item: T) -> Self
@@ -77,15 +80,13 @@ impl CompileStorage {
 
     fn get_compile_result(self) -> Option<CompileResult> {
         if let Some(req) = self.req {
-            let output = CompileResult{
+            let output = CompileResult {
                 net: self.net.unwrap(),
-                req
+                req,
             };
             Some(output)
         } else {
             None
         }
     }
-
 }
-

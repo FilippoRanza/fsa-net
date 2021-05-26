@@ -4,7 +4,7 @@ use crate::utils::zeros;
 pub struct State {
     states: Vec<usize>,
     links: Vec<Option<usize>>,
-    index: usize
+    index: usize,
 }
 
 impl State {
@@ -28,6 +28,10 @@ impl State {
     pub fn set_index(mut self, index: usize) -> Self {
         self.index = index;
         self
+    }
+
+    pub fn get_index(&self) -> usize {
+        self.index
     }
 
     fn get_state(&self, automata: usize) -> usize {
@@ -269,7 +273,9 @@ mod test {
             .set_input(Event::new(0, 0))
             .add_output(Event::new(1, 1))
             .set_observability(0);
-        let trans_b_a = Transition::new().add_output(Event::new(1, 1)).set_relevance(0);
+        let trans_b_a = Transition::new()
+            .add_output(Event::new(1, 1))
+            .set_relevance(0);
 
         let auto_a = Automata::new(
             1,
@@ -280,9 +286,13 @@ mod test {
             ],
         );
 
-        let trans_a_b = Transition::new().add_output(Event::new(0, 0)).set_observability(1);
+        let trans_a_b = Transition::new()
+            .add_output(Event::new(0, 0))
+            .set_observability(1);
         let trans_b_b = Transition::new().set_input(Event::new(1, 1));
-        let trans_c_b = Transition::new().set_input(Event::new(1, 1)).set_relevance(1);
+        let trans_c_b = Transition::new()
+            .set_input(Event::new(1, 1))
+            .set_relevance(1);
 
         let auto_b = Automata::new(
             0,

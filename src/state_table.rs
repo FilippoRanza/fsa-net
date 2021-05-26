@@ -43,4 +43,8 @@ where
             panic!("Call get_object on non existing index {}", index)
         }
     }
+
+    pub fn to_state_list(self) -> Vec<T> {
+        self.table.into_iter().map(|(s, _)| s).collect()
+    }
 }

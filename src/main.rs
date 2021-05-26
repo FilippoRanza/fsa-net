@@ -5,12 +5,12 @@ use structopt::StructOpt;
 mod command;
 mod compiler;
 mod engine;
+mod export_results;
 mod graph;
 mod input_output;
 mod network;
 mod state_table;
 mod utils;
-mod export_results;
 
 #[derive(StructOpt)]
 struct Arguments {

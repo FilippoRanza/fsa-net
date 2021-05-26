@@ -22,7 +22,13 @@ fn compile_block<'a>(
     table: &GlobalNameTable,
 ) -> (&'a str, ItemType) {
     match block {
-        syntax_tree::Block::Network(net) => (net.name, compile_network::compile_network(net, table).into()),
-        syntax_tree::Block::Request(req) => (req.name, compile_requests::compile_requests(req, table).into()),
+        syntax_tree::Block::Network(net) => (
+            net.name,
+            compile_network::compile_network(net, table).into(),
+        ),
+        syntax_tree::Block::Request(req) => (
+            req.name,
+            compile_requests::compile_requests(req, table).into(),
+        ),
     }
 }
