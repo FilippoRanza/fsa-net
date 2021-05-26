@@ -4,6 +4,7 @@ use crate::utils::zeros;
 pub struct State {
     states: Vec<usize>,
     links: Vec<Option<usize>>,
+    index: usize
 }
 
 impl State {
@@ -11,6 +12,7 @@ impl State {
         Self {
             states,
             links: zeros(link_count),
+            index: 0,
         }
     }
 
@@ -21,6 +23,11 @@ impl State {
             }
         }
         true
+    }
+
+    pub fn set_index(mut self, index: usize) -> Self {
+        self.index = index;
+        self
     }
 
     fn get_state(&self, automata: usize) -> usize {
@@ -206,8 +213,8 @@ impl Transition {
 }
 
 pub struct TransEvent {
-    obs: Option<usize>,
-    rel: Option<usize>,
+    pub obs: Option<usize>,
+    pub rel: Option<usize>,
 }
 
 impl From<&Transition> for TransEvent {
@@ -260,8 +267,9 @@ mod test {
 
         let trans_a_a = Transition::new()
             .set_input(Event::new(0, 0))
-            .add_output(Event::new(1, 1));
-        let trans_b_a = Transition::new().add_output(Event::new(1, 1));
+            .add_output(Event::new(1, 1))
+            .set_observability(0);
+        let trans_b_a = Transition::new().add_output(Event::new(1, 1)).set_relevance(0);
 
         let auto_a = Automata::new(
             1,
@@ -272,9 +280,9 @@ mod test {
             ],
         );
 
-        let trans_a_b = Transition::new().add_output(Event::new(0, 0));
+        let trans_a_b = Transition::new().add_output(Event::new(0, 0)).set_observability(1);
         let trans_b_b = Transition::new().set_input(Event::new(1, 1));
-        let trans_c_b = Transition::new().set_input(Event::new(1, 1));
+        let trans_c_b = Transition::new().set_input(Event::new(1, 1)).set_relevance(1);
 
         let auto_b = Automata::new(
             0,

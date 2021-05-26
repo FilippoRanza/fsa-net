@@ -4,6 +4,8 @@ use crate::state_table;
 
 use std::collections::VecDeque;
 
+use super::engine_utils::get_next_index;
+
 pub struct FullSpaceResult {
     pub graph: graph::Graph,
 }
@@ -26,14 +28,7 @@ pub fn compute_full_space(net: &network::Network) -> FullSpaceResult {
 
         let next_state = net.step_one(curr_state);
         for (_, next_state) in next_state.into_iter() {
-            let next_index = if !table.is_present(&next_state) {
-                let tmp_index = table.insert_state(next_state);
-                stack.push_front(tmp_index);
-                tmp_index
-            } else {
-                table.get_index(&next_state).unwrap()
-            };
-
+            let next_index = get_next_index(next_state, &mut table, &mut stack);
             builder.add_arc(state_index, next_index);
         }
     }
@@ -55,43 +50,18 @@ impl Into<super::NetworkResult> for FullSpaceResult {
 mod test {
 
     use super::*;
+    use test_utils::load_code_from_file;
+    use fsa_net_parser::parse;
+    use crate::compiler::compile;
 
     #[test]
-    fn test_linspace() {
-        let trans_a_a = network::Transition::new()
-            .set_input(network::Event::new(0, 0))
-            .add_output(network::Event::new(1, 1));
-        let trans_b_a = network::Transition::new().add_output(network::Event::new(1, 1));
+    fn test_full_space() {
+        
+        let src_code = load_code_from_file("simple-network");
+        let code = parse(&src_code).expect("`simple-network` should be syntactically correct");
+        let comp_res = compile(&code).expect("`simple-network` should be semantically correct");
+        let net = &comp_res[0].net;
 
-        let auto_a = network::Automata::new(
-            0,
-            0,
-            vec![
-                vec![network::Adjacent::new(1, trans_a_a)],
-                vec![network::Adjacent::new(0, trans_b_a)],
-            ],
-        );
-
-        let trans_a_b = network::Transition::new().add_output(network::Event::new(0, 0));
-        let trans_b_b = network::Transition::new().set_input(network::Event::new(1, 1));
-        let trans_c_b = network::Transition::new().set_input(network::Event::new(1, 1));
-
-        let auto_b = network::Automata::new(
-            0,
-            1,
-            vec![
-                vec![network::Adjacent::new(1, trans_a_b)],
-                vec![
-                    network::Adjacent::new(0, trans_b_b),
-                    network::Adjacent::new(1, trans_c_b),
-                ],
-            ],
-        );
-
-        let net = network::Network::new(
-            vec![auto_a, auto_b],
-            vec![network::Link::new(1, 0), network::Link::new(0, 1)],
-        );
 
         let result = compute_full_space(&net);
 

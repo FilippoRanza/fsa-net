@@ -5,6 +5,8 @@ network TestNetwork {
     link L3 TestA TestB
 
     events e2, e3
+    obs o2, o3
+    rel r, f
     automata TestA {
         state b
         begin a
@@ -13,11 +15,13 @@ network TestNetwork {
             dst b
             input e2(L2)
             output e3(L3)
+            obs o2
         }
         trans tb {
             src b
             dst a
             output e3(L3)
+            rel r
         }
     }
 
@@ -28,6 +32,7 @@ network TestNetwork {
             src a
             dst b
             output e2(L2)
+            obs o3
         }
 
         trans tb {
@@ -40,6 +45,7 @@ network TestNetwork {
             src b
             dst b
             input e3(L3)
+            rel f
         }
 
     }
