@@ -1,5 +1,5 @@
 use super::super::name_table::GlobalNameTable;
-use super::super::CompileResult;
+use super::super::CompileNetwork;
 use super::result_builder::{ItemType, ResultBuilder};
 
 use super::compile_network;
@@ -8,7 +8,7 @@ use super::compile_requests;
 use fsa_net_parser::syntax_tree;
 use fsa_net_parser::Code;
 
-pub fn compile_networks(code: &Code, table: &GlobalNameTable) -> Vec<CompileResult> {
+pub fn compile_networks(code: &Code, table: &GlobalNameTable) -> Vec<CompileNetwork> {
     code.iter()
         .map(|blk| compile_block(blk, table))
         .fold(ResultBuilder::new(), |builder, (name, item)| {

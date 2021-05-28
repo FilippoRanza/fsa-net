@@ -17,7 +17,7 @@ struct Arguments {
     file: Option<path::PathBuf>,
 }
 
-fn run_request(cmds: Vec<compiler::CompileResult>) {
+fn run_request(cmds: Vec<compiler::CompileNetwork>) {
     for cmd in &cmds {
         let res = engine::run(&cmd.net, &cmd.req);
         let res = export_results::export_results(res);
@@ -30,5 +30,5 @@ fn main() {
     let src_code = input_output::get_fsa_code(&args.file).unwrap();
     let code = fsa_net_parser::parse(&src_code).unwrap();
     let compile_result = compiler::compile(&code).unwrap();
-    run_request(compile_result);
+    run_request(compile_result.compile_network);
 }

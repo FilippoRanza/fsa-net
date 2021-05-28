@@ -3,16 +3,22 @@ use super::error;
 use super::link_connection;
 use super::name_table;
 use super::net_compiler;
-use super::CompileResult;
+use super::{CompileResult, CompileNetwork};
 
 use fsa_net_parser::Code;
 
-pub fn compile<'a>(code: &'a Code<'a>) -> Result<Vec<CompileResult>, error::CompileError<'a>> {
+pub fn compile<'a>(code: &'a Code<'a>) -> Result<CompileResult, error::CompileError<'a>> {
     let table = name_table::build_name_table(code)?;
     automata_connection::check_connection(code)?;
     link_connection::link_check(code)?;
     let comp_res = net_compiler::compile_networks(code, &table);
-    Ok(comp_res)
+
+    let output = CompileResult {
+        compile_network : comp_res,
+        index_table : table.get_index_table()
+    };
+
+    Ok(output)
 }
 
 #[cfg(test)]
@@ -87,6 +93,6 @@ mod test {
         let src_code = load_code_from_file("simple-network");
         let code = parse(&src_code).expect("`simple-network` should be syntactically correct");
         let comp_res = compile(&code).expect("`simple-network` should be semantically correct");
-        assert_eq!(comp_res.len(), 1);
+        assert_eq!(comp_res.compile_network.len(), 1);
     }
 }

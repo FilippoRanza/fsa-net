@@ -14,11 +14,13 @@ use std::collections::HashMap;
 use super::name_error::*;
 use crate::new_name_error;
 
+use super::super::index_name_table::{
+    AutomataNamesFactory, GlobalIndexTable, GlobalIndexTableFactory, NetworkIndexTableFactory,
+};
 use super::class_index::ClassIndex;
 use super::name_class::NameClass;
 use super::request_table::{Request, RequestTable};
 use super::Loc;
-use super::super::index_name_table::{GlobalIndexTable, GlobalIndexTableFactory, NetworkIndexTableFactory, AutomataNamesFactory};
 
 /**
  * This struct contain both the definition
@@ -257,7 +259,6 @@ impl<'a> GlobalNameTable<'a> {
         }
         factory.build()
     }
-
 
     fn validate_network(self) -> GlobalNameResult<'a> {
         for (net_name, table) in self.networks.iter() {
@@ -567,7 +568,6 @@ impl<'a> NetworkNameTable<'a> {
             factory.add_automata(auto_factory, index);
         }
 
-
         (factory, self.index)
     }
 
@@ -775,7 +775,7 @@ impl<'a> AutomataNameTable<'a> {
         for (name, info) in self.names.into_iter() {
             match info.class {
                 AutomataName::State | AutomataName::Begin => factory.add_state(name, info.index),
-                AutomataName::Transition => factory.add_transition(name, info.index)
+                AutomataName::Transition => factory.add_transition(name, info.index),
             }
         }
 

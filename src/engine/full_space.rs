@@ -55,7 +55,7 @@ mod test {
         let src_code = load_code_from_file("simple-network");
         let code = parse(&src_code).expect("`simple-network` should be syntactically correct");
         let comp_res = compile(&code).expect("`simple-network` should be semantically correct");
-        let net = &comp_res[0].net;
+        let net = &comp_res.compile_network[0].net;
 
         let result = compute_full_space(&net);
 

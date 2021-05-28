@@ -1,7 +1,7 @@
 use crate::command;
 use crate::network;
 
-use super::super::CompileResult;
+use super::super::CompileNetwork;
 
 use std::collections::HashMap;
 
@@ -16,7 +16,7 @@ impl<'a> ResultBuilder<'a> {
         }
     }
 
-    pub fn build_result(self) -> Vec<CompileResult> {
+    pub fn build_result(self) -> Vec<CompileNetwork> {
         let mut store: Vec<CompileStorage> = self.results.into_iter().map(|(_, v)| v).collect();
         store.sort_by_key(|s| s.index);
         store
@@ -78,9 +78,9 @@ impl CompileStorage {
         }
     }
 
-    fn get_compile_result(self) -> Option<CompileResult> {
+    fn get_compile_result(self) -> Option<CompileNetwork> {
         if let Some(req) = self.req {
-            let output = CompileResult {
+            let output = CompileNetwork {
                 net: self.net.unwrap(),
                 req,
             };

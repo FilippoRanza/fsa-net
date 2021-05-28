@@ -1,5 +1,6 @@
 use crate::utils::auto_sort;
 
+#[derive(Debug)]
 pub struct GlobalIndexTable<'a> {
     networks: Vec<NetworkIndexTable<'a>>,
 }
@@ -10,6 +11,7 @@ impl<'a> GlobalIndexTable<'a> {
     }
 }
 
+#[derive(Debug)]
 pub struct NetworkIndexTable<'a> {
     name: &'a str,
     net_names: NetNames<'a>,
@@ -30,6 +32,7 @@ impl<'a> NetworkIndexTable<'a> {
     }
 }
 
+#[derive(Debug)]
 pub struct NetNames<'a> {
     rel_names: Vec<&'a str>,
     obs_names: Vec<&'a str>,
@@ -55,6 +58,7 @@ impl<'a> NetNames<'a> {
     }
 }
 
+#[derive(Debug)]
 pub struct AutomataNames<'a> {
     name: &'a str,
     state_names: Vec<&'a str>,
@@ -110,7 +114,7 @@ macro_rules! add_net_name {
 }
 
 impl<'a> GlobalIndexTableFactory<'a> {
-    pub fn add_network(&mut self, factory: NetworkIndexTableFactory<'a>, index: usize)  {
+    pub fn add_network(&mut self, factory: NetworkIndexTableFactory<'a>, index: usize) {
         self.networks.push((factory, index));
     }
 
@@ -140,7 +144,7 @@ impl<'a> NetworkIndexTableFactory<'a> {
     add_net_name! {add_ev_name}
     add_net_name! {add_link_name}
 
-    pub fn add_automata(&mut self, factory: AutomataNamesFactory<'a>, index: usize)  {
+    pub fn add_automata(&mut self, factory: AutomataNamesFactory<'a>, index: usize) {
         self.automata_names.push((factory, index));
     }
 
@@ -211,9 +215,6 @@ impl<'a> AutomataNamesFactory<'a> {
     add_name! {trans_names, add_transition}
 }
 
-
-
-
 #[cfg(test)]
 mod test {
 
@@ -222,7 +223,7 @@ mod test {
     #[test]
     fn test_index_table() {
         let mut global_factory = GlobalIndexTableFactory::default();
-        
+
         let mut net_factory = NetworkIndexTableFactory::new("a");
         net_factory.add_ev_name("b", 1);
         net_factory.add_ev_name("c", 0);
@@ -244,7 +245,6 @@ mod test {
 
         net_factory.add_automata(automata_factory, 1);
 
-
         let mut automata_factory = AutomataNamesFactory::new("BB");
         automata_factory.add_state("St0", 1);
         automata_factory.add_state("St1", 0);
@@ -255,7 +255,6 @@ mod test {
         automata_factory.add_transition("Tr1", 1);
 
         net_factory.add_automata(automata_factory, 0);
-
 
         global_factory.add_network(net_factory, 0);
 
@@ -280,8 +279,6 @@ mod test {
         assert_eq!(auto_names.get_transition_name(1), "Tr1");
         assert_eq!(auto_names.get_transition_name(2), "Tr2");
 
-
-
         let auto_names = net.get_automata_names(1);
         assert_eq!(auto_names.get_name(), "AA");
 
@@ -293,24 +290,11 @@ mod test {
         assert_eq!(auto_names.get_transition_name(1), "T1");
         assert_eq!(auto_names.get_transition_name(2), "T2");
 
-
         let net = index_table.get_network_table(1);
         assert_eq!(net.get_name(), "a");
 
         let net_names = net.get_network_names();
         assert_eq!(net_names.get_ev_name(0), "c");
         assert_eq!(net_names.get_ev_name(1), "b");
-
-
-
-
     }
-
 }
-
-
-
-
-
-
-
