@@ -10,11 +10,10 @@ mod net_compiler;
 use super::command;
 use super::network;
 
-
 #[derive(Debug)]
 pub struct CompileResult<'a> {
     pub compile_network: Vec<CompileNetwork>,
-    pub index_table: GlobalIndexTable<'a>
+    pub index_table: GlobalIndexTable<'a>,
 }
 
 #[derive(Debug)]
