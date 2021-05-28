@@ -18,6 +18,7 @@ use super::class_index::ClassIndex;
 use super::name_class::NameClass;
 use super::request_table::{Request, RequestTable};
 use super::Loc;
+use super::super::index_name_table::{GlobalIndexTable, GlobalIndexTableFactory, NetworkIndexTableFactory, AutomataNamesFactory};
 
 /**
  * This struct contain both the definition
@@ -28,6 +29,7 @@ pub struct GlobalNameTable<'a> {
     networks: HashMap<&'a str, NetworkNameTable<'a>>,
     requests: HashMap<&'a str, RequestTable<'a>>,
     status: CollectionStatus<'a>,
+    net_index: usize,
 }
 
 /*
@@ -51,6 +53,7 @@ impl<'a> GlobalNameTable<'a> {
             networks: HashMap::new(),
             requests: HashMap::new(),
             status: CollectionStatus::Global,
+            net_index: 0,
         }
     }
 
@@ -246,6 +249,16 @@ impl<'a> GlobalNameTable<'a> {
         item.index
     }
 
+    pub fn get_index_table(self) -> GlobalIndexTable<'a> {
+        let mut factory = GlobalIndexTableFactory::default();
+        for (name, table) in self.networks.into_iter() {
+            let (net_factory, index) = table.into_index_table(name);
+            factory.add_network(net_factory, index);
+        }
+        factory.build()
+    }
+
+
     fn validate_network(self) -> GlobalNameResult<'a> {
         for (net_name, table) in self.networks.iter() {
             table.validate(net_name)?;
@@ -303,7 +316,9 @@ impl<'a> GlobalNameTable<'a> {
 
     fn insert_new_network(mut self, name: &'a str, loc: Loc, stat: NameStatus) -> Self {
         self.status = CollectionStatus::Network(name);
-        self.networks.insert(name, NetworkNameTable::new(loc, stat));
+        self.networks
+            .insert(name, NetworkNameTable::new(loc, stat, self.net_index));
+        self.net_index += 1;
         self
     }
 
@@ -520,17 +535,40 @@ struct NetworkNameTable<'a> {
     counter: ClassIndex<NetworkName>,
     names: HashMap<&'a str, NetworkNameInfo>,
     automata: HashMap<&'a str, AutomataNameTable<'a>>,
+    index: usize,
 }
 
 impl<'a> NetworkNameTable<'a> {
-    fn new(loc: Loc, stat: NameStatus) -> Self {
+    fn new(loc: Loc, stat: NameStatus, index: usize) -> Self {
         NetworkNameTable {
             loc,
             stat,
             counter: ClassIndex::new(),
             names: HashMap::new(),
             automata: HashMap::new(),
+            index,
         }
+    }
+
+    fn into_index_table(self, name: &'a str) -> (NetworkIndexTableFactory<'a>, usize) {
+        let mut factory = NetworkIndexTableFactory::new(name);
+        for (name, info) in self.names.into_iter() {
+            match info.class {
+                NetworkName::Event => factory.add_ev_name(name, info.index),
+                NetworkName::Link => factory.add_link_name(name, info.index),
+                NetworkName::ObsLabel => factory.add_obs_label(name, info.index),
+                NetworkName::RelLabel => factory.add_rel_label(name, info.index),
+                _ => {}
+            }
+        }
+
+        for (name, table) in self.automata.into_iter() {
+            let (auto_factory, index) = table.into_index_table(name);
+            factory.add_automata(auto_factory, index);
+        }
+
+
+        (factory, self.index)
     }
 
     fn check_network_name<T: Into<NameClass>>(
@@ -730,6 +768,18 @@ impl<'a> AutomataNameTable<'a> {
             counter: ClassIndex::new(),
             name,
         }
+    }
+
+    fn into_index_table(self, name: &'a str) -> (AutomataNamesFactory<'a>, usize) {
+        let mut factory = AutomataNamesFactory::new(name);
+        for (name, info) in self.names.into_iter() {
+            match info.class {
+                AutomataName::State | AutomataName::Begin => factory.add_state(name, info.index),
+                AutomataName::Transition => factory.add_transition(name, info.index)
+            }
+        }
+
+        (factory, self.index)
     }
 
     fn set_index(&mut self, name: &str) {

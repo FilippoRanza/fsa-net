@@ -1,4 +1,4 @@
-use crate::utils::zeros;
+use crate::utils::{auto_sort, zeros};
 
 type AdjList = Vec<Vec<usize>>;
 
@@ -24,7 +24,7 @@ impl Graph {
 
 pub struct GraphBuilder {
     nodes_list: Vec<(usize, usize)>,
-    node_kind: Vec<(usize, NodeKind)>,
+    node_kind: Vec<(NodeKind, usize)>,
 }
 
 impl GraphBuilder {
@@ -44,20 +44,20 @@ impl GraphBuilder {
     }
 
     fn add_node(&mut self, index: usize, kind: NodeKind) {
-        self.node_kind.push((index, kind));
+        self.node_kind.push((kind, index));
     }
 
     pub fn add_arc(&mut self, src: usize, dst: usize) {
         self.nodes_list.push((src, dst));
     }
 
-    pub fn build_graph(mut self) -> Graph {
+    pub fn build_graph(self) -> Graph {
         let mut adjacent: AdjList = zeros(self.node_kind.len());
         for (s, d) in self.nodes_list.into_iter() {
             adjacent[s].push(d);
         }
-        self.node_kind.sort_by_key(|(i, _)| *i);
-        let nodes = self.node_kind.into_iter().map(|(_, i)| i).collect();
+
+        let nodes = auto_sort(&mut self.node_kind.into_iter());
         Graph { nodes, adjacent }
     }
 }

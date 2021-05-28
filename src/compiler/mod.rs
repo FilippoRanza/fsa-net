@@ -2,6 +2,7 @@ mod automata_connection;
 mod compiler;
 mod compiler_utils;
 mod error;
+mod index_name_table;
 mod link_connection;
 mod name_table;
 mod net_compiler;
