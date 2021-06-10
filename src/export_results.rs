@@ -52,7 +52,7 @@ impl<'a> ExportResult<'a> {
 fn export_result<'a>(result: &'a NetworkResult, table: &'a NetworkIndexTable<'a>) -> Export<'a> {
     match result {
         NetworkResult::FullSpace(full_space) => export_full_space(&full_space, table).into(),
-        NetworkResult::Linspace(lin_space) => unimplemented!(),
+        NetworkResult::Linspace(lin_space) => export_lin_space(&lin_space, table).into(),
     }
 }
 
@@ -68,13 +68,25 @@ fn export_full_space<'a>(
     ExportFullSpace::new(full_space.graph.get_adjacent_list(), states)
 }
 
-fn export_lin_space(lin_space: LinSpaceResult) -> String {
-    Default::default()
+fn export_lin_space<'a>(
+    lin_space: &'a LinSpaceResult,
+    table: &'a NetworkIndexTable<'a>,
+) -> ExportLinSpace<'a> {
+    let states = export_state_list(
+        &lin_space.states,
+        &lin_space.graph.get_node_kind_list(),
+        table,
+    );
+    ExportLinSpace {
+        adjacent: lin_space.graph.get_adjacent_list(),
+        states,
+    }
 }
 
 #[derive(Serialize)]
 enum Export<'a> {
     FullSpace(ExportFullSpace<'a>),
+    LinSpace(ExportLinSpace<'a>),
 }
 
 impl<'a> From<ExportFullSpace<'a>> for Export<'a> {
@@ -83,8 +95,20 @@ impl<'a> From<ExportFullSpace<'a>> for Export<'a> {
     }
 }
 
+impl<'a> From<ExportLinSpace<'a>> for Export<'a> {
+    fn from(res: ExportLinSpace<'a>) -> Self {
+        Self::LinSpace(res)
+    }
+}
+
 #[derive(Serialize)]
 struct ExportFullSpace<'a> {
+    adjacent: &'a Vec<Vec<usize>>,
+    states: Vec<State<'a>>,
+}
+
+#[derive(Serialize)]
+struct ExportLinSpace<'a> {
     adjacent: &'a Vec<Vec<usize>>,
     states: Vec<State<'a>>,
 }
