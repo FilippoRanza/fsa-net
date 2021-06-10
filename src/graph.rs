@@ -1,4 +1,5 @@
 use crate::utils::{auto_sort, zeros};
+use crate::enumerate;
 
 type AdjList = Vec<Vec<usize>>;
 
@@ -64,6 +65,55 @@ pub enum NodeKind {
     Final,
 }
 
+fn prune_list(adj: &AdjList, kind_list: &[NodeKind]) -> Vec<usize> {
+    let mut reach: Vec<bool> = kind_list
+        .iter()
+        .map(|k| match k {
+            NodeKind::Final => true,
+            NodeKind::Simple => false,
+        })
+        .collect();
+    let mut seen = reach.clone();
+
+    for node in 0..adj.len() {
+        if !seen[node] {
+            make_prune_list(node, adj, &mut seen, &mut reach);
+        }
+    }
+    
+    reach
+        .into_iter()
+        .enumerate()
+        .filter_map(|(i, s)| if s { None } else { Some(i) })
+        .collect()
+}
+
+fn make_prune_list(
+    curr: usize,
+    adj: &AdjList,
+    seen: &mut Vec<bool>,
+    reach: &mut Vec<bool>,
+) -> bool {
+    if seen[curr] {
+        reach[curr]
+    } else if reach[curr] {
+        seen[curr] = true;
+        true
+    } else {
+        seen[curr] = true;
+        let next = &adj[curr];
+        let next = next.iter().find(|curr| {
+            make_prune_list(**curr, adj, seen, reach)
+        });
+        let stat = next.is_some();
+        reach[curr] = stat;
+        stat
+    }
+}
+
+
+
+
 #[cfg(test)]
 mod test {
 
@@ -111,4 +161,50 @@ mod test {
         assert_eq!(graph.adjacent[3], vec![1, 4]);
         assert_eq!(graph.adjacent[4], Vec::<usize>::new());
     }
+
+    #[test]
+    fn test_prune_list() {
+        let node_type = [true, false, false, false, true, false, false, false, false, false, false, false, false, false, false, false];
+        let mut builder = GraphBuilder::new();
+        for (i, nt) in enumerate!{node_type} {
+            if *nt {
+                builder.add_final_node(i);
+            } else {
+                builder.add_simple_node(i);
+            }
+        }
+
+        let arcs = [
+            (0, 1),
+            (0, 2),
+            (0, 3),
+            (3, 6),
+            (6, 5),
+            (5, 4),
+            (2, 4),
+            (6, 7),
+            (0, 8),
+            (8, 9),
+            (9, 11),
+            (9, 10),
+            (11, 0),
+            (0, 12),
+            (12, 13),
+            (13, 14),
+            (14, 15),
+            (13, 15),
+            (15, 12),
+        ];
+
+        for (s, d) in &arcs {
+            builder.add_arc(*s, *d);
+        }
+
+        let graph = builder.build_graph();
+
+        let prune = prune_list(&graph.adjacent, &graph.nodes);
+        assert_eq!(prune, vec![1, 7, 10, 12, 13, 14, 15]);
+    }
+
+
 }

@@ -20,3 +20,11 @@ pub fn zip<'a, T, K>(
 ) -> impl Iterator<Item = (&'a T, &'a K)> + 'a {
     list_a.iter().zip(list_b.iter())
 }
+
+
+#[macro_export]
+macro_rules! enumerate {
+    ($iter: expr) => {
+        $iter.iter().enumerate()
+    };
+}
