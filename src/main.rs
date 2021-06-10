@@ -15,13 +15,15 @@ mod utils;
 #[derive(StructOpt)]
 struct Arguments {
     file: Option<path::PathBuf>,
+    #[structopt(short="-p", long="--pretty", parse(from_flag = export_results::JsonFormat::new))]
+    format: export_results::JsonFormat,
 }
 
-fn run_request(comp_res: compiler::CompileResult) {
+fn run_request(comp_res: compiler::CompileResult, format: export_results::JsonFormat) {
     for (i, cmd) in comp_res.compile_network.iter().enumerate() {
         let res = engine::run(&cmd.net, &cmd.req);
         let net_table = comp_res.index_table.get_network_table(i);
-        let res = export_results::export_results(res, net_table);
+        let res = export_results::export_results(res, net_table, &format);
         println!("{}", res);
     }
 }
@@ -31,5 +33,5 @@ fn main() {
     let src_code = input_output::get_fsa_code(&args.file).unwrap();
     let code = fsa_net_parser::parse(&src_code).unwrap();
     let compile_result = compiler::compile(&code).unwrap();
-    run_request(compile_result);
+    run_request(compile_result, args.format);
 }

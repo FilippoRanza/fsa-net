@@ -9,7 +9,7 @@ pub struct Graph {
 }
 
 impl Graph {
-    pub fn get_adjacent_list(&self) -> &AdjList {
+    pub fn get_adjacent_list<'a>(&'a self) -> &'a AdjList {
         &self.adjacent
     }
 

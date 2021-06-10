@@ -1,32 +1,86 @@
 use crate::compiler::{NetNames, NetworkIndexTable};
 use crate::engine::{FullSpaceResult, LinSpaceResult, NetworkResult};
-use crate::network;
 use crate::graph::NodeKind;
-use serde::Serialize;
+use crate::network;
 use crate::utils::zip;
+use serde::Serialize;
 
-pub fn export_results(results: Vec<NetworkResult>, index_table: &NetworkIndexTable) -> String {
-    results
-        .into_iter()
-        .map(|results| export_result(results, index_table))
-        .fold(String::new(), |acc, curr| acc + &curr)
+pub enum JsonFormat {
+    Compact,
+    Pretty,
 }
 
-fn export_result(result: NetworkResult, table: &NetworkIndexTable) -> String {
-    match result {
-        NetworkResult::FullSpace(full_space) => export_full_space(full_space, table),
-        NetworkResult::Linspace(lin_space) => export_lin_space(lin_space),
+impl JsonFormat {
+    pub fn new(pretty: bool) -> Self {
+        if pretty {
+            Self::Pretty
+        } else {
+            Self::Compact
+        }
     }
 }
 
-fn export_full_space(full_space: FullSpaceResult, table: &NetworkIndexTable) -> String {
-    let states = export_state_list(&full_space.states, &full_space.graph.get_node_kind_list(), table);
-    let exporter = ExportFullSpace::new(full_space.graph.get_adjacent_list(), states);
-    serde_json::to_string(&exporter).unwrap()
+pub fn export_results(
+    results: Vec<NetworkResult>,
+    index_table: &NetworkIndexTable,
+    fmt: &JsonFormat,
+) -> String {
+    let exports = results
+        .iter()
+        .map(|results| export_result(results, index_table))
+        .collect();
+    let name = index_table.get_name();
+    ExportResult { name, exports }.to_json(fmt)
+}
+
+#[derive(Serialize)]
+pub struct ExportResult<'a> {
+    name: &'a str,
+    exports: Vec<Export<'a>>,
+}
+
+impl<'a> ExportResult<'a> {
+    fn to_json(&self, fmt: &JsonFormat) -> String {
+        let f = match fmt {
+            JsonFormat::Compact => serde_json::to_string,
+            JsonFormat::Pretty => serde_json::to_string_pretty,
+        };
+        f(self).unwrap()
+    }
+}
+
+fn export_result<'a>(result: &'a NetworkResult, table: &'a NetworkIndexTable<'a>) -> Export<'a> {
+    match result {
+        NetworkResult::FullSpace(full_space) => export_full_space(&full_space, table).into(),
+        NetworkResult::Linspace(lin_space) => unimplemented!(),
+    }
+}
+
+fn export_full_space<'a>(
+    full_space: &'a FullSpaceResult,
+    table: &'a NetworkIndexTable<'a>,
+) -> ExportFullSpace<'a> {
+    let states = export_state_list(
+        &full_space.states,
+        &full_space.graph.get_node_kind_list(),
+        table,
+    );
+    ExportFullSpace::new(full_space.graph.get_adjacent_list(), states)
 }
 
 fn export_lin_space(lin_space: LinSpaceResult) -> String {
     Default::default()
+}
+
+#[derive(Serialize)]
+enum Export<'a> {
+    FullSpace(ExportFullSpace<'a>),
+}
+
+impl<'a> From<ExportFullSpace<'a>> for Export<'a> {
+    fn from(res: ExportFullSpace<'a>) -> Self {
+        Self::FullSpace(res)
+    }
 }
 
 #[derive(Serialize)]
@@ -46,10 +100,16 @@ fn export_state_list<'a>(
     state_kinds: &[NodeKind],
     table: &'a NetworkIndexTable,
 ) -> Vec<State<'a>> {
-    zip(states, state_kinds).map(|(s, k)| export_state(s, k, table)).collect()
+    zip(states, state_kinds)
+        .map(|(s, k)| export_state(s, k, table))
+        .collect()
 }
 
-fn export_state<'a>(net_state: &network::State, state_kind: &NodeKind, table: &'a NetworkIndexTable) -> State<'a> {
+fn export_state<'a>(
+    net_state: &network::State,
+    state_kind: &NodeKind,
+    table: &'a NetworkIndexTable,
+) -> State<'a> {
     let states = net_state
         .get_states()
         .map(|(auto, state)| table.get_automata_names(auto).get_state_name(state))
@@ -65,7 +125,11 @@ fn export_state<'a>(net_state: &network::State, state_kind: &NodeKind, table: &'
         })
         .collect();
     let kind = state_kind.into();
-    State { states, links, kind }
+    State {
+        states,
+        links,
+        kind,
+    }
 }
 
 fn export_content<'a>(content: Option<usize>, table: &'a NetNames) -> Option<&'a str> {
@@ -87,14 +151,14 @@ struct State<'a> {
 #[derive(Serialize)]
 enum StateKind {
     Simple,
-    Final
+    Final,
 }
 
 impl From<&NodeKind> for StateKind {
     fn from(nk: &NodeKind) -> Self {
         match nk {
             NodeKind::Final => Self::Final,
-            NodeKind::Simple => Self::Simple
+            NodeKind::Simple => Self::Simple,
         }
     }
 }

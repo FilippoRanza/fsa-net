@@ -96,9 +96,9 @@ mod test {
     use super::*;
     use crate::compiler::compile;
     use crate::graph::NodeKind;
+    use crate::utils::zip;
     use fsa_net_parser::parse;
     use test_utils::load_code_from_file;
-    use crate::utils::zip;
 
     #[test]
     fn test_linspace() {
