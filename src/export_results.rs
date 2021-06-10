@@ -1,7 +1,9 @@
 use crate::compiler::{NetNames, NetworkIndexTable};
 use crate::engine::{FullSpaceResult, LinSpaceResult, NetworkResult};
 use crate::network;
+use crate::graph::NodeKind;
 use serde::Serialize;
+use crate::utils::zip;
 
 pub fn export_results(results: Vec<NetworkResult>, index_table: &NetworkIndexTable) -> String {
     results
@@ -18,7 +20,7 @@ fn export_result(result: NetworkResult, table: &NetworkIndexTable) -> String {
 }
 
 fn export_full_space(full_space: FullSpaceResult, table: &NetworkIndexTable) -> String {
-    let states = export_state_list(&full_space.states, table);
+    let states = export_state_list(&full_space.states, &full_space.graph.get_node_kind_list(), table);
     let exporter = ExportFullSpace::new(full_space.graph.get_adjacent_list(), states);
     serde_json::to_string(&exporter).unwrap()
 }
@@ -41,12 +43,13 @@ impl<'a> ExportFullSpace<'a> {
 
 fn export_state_list<'a>(
     states: &[network::State],
+    state_kinds: &[NodeKind],
     table: &'a NetworkIndexTable,
 ) -> Vec<State<'a>> {
-    states.iter().map(|s| export_state(s, table)).collect()
+    zip(states, state_kinds).map(|(s, k)| export_state(s, k, table)).collect()
 }
 
-fn export_state<'a>(net_state: &network::State, table: &'a NetworkIndexTable) -> State<'a> {
+fn export_state<'a>(net_state: &network::State, state_kind: &NodeKind, table: &'a NetworkIndexTable) -> State<'a> {
     let states = net_state
         .get_states()
         .map(|(auto, state)| table.get_automata_names(auto).get_state_name(state))
@@ -61,7 +64,8 @@ fn export_state<'a>(net_state: &network::State, table: &'a NetworkIndexTable) ->
             )
         })
         .collect();
-    State { states, links }
+    let kind = state_kind.into();
+    State { states, links, kind }
 }
 
 fn export_content<'a>(content: Option<usize>, table: &'a NetNames) -> Option<&'a str> {
@@ -77,4 +81,20 @@ fn export_content<'a>(content: Option<usize>, table: &'a NetNames) -> Option<&'a
 struct State<'a> {
     states: Vec<&'a str>,
     links: Vec<(&'a str, Option<&'a str>)>,
+    kind: StateKind,
+}
+
+#[derive(Serialize)]
+enum StateKind {
+    Simple,
+    Final
+}
+
+impl From<&NodeKind> for StateKind {
+    fn from(nk: &NodeKind) -> Self {
+        match nk {
+            NodeKind::Final => Self::Final,
+            NodeKind::Simple => Self::Simple
+        }
+    }
 }

@@ -20,6 +20,3 @@ pub fn load_code_from_file(name: &str) -> String {
 }
 
 
-pub fn zip<'a, T, K>(list_a: &'a [T], list_b: &'a [K]) -> impl Iterator<Item=(&'a T, &'a K)> +'a {
-    list_a.iter().zip(list_b.iter())
-}

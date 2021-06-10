@@ -13,3 +13,8 @@ where
     tmp.sort_by_key(|(_, i)| *i);
     tmp.into_iter().map(|(v, _)| v).collect()
 }
+
+pub fn zip<'a, T, K>(list_a: &'a [T], list_b: &'a [K]) -> impl Iterator<Item=(&'a T, &'a K)> +'a {
+    list_a.iter().zip(list_b.iter())
+}
+
