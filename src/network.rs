@@ -34,6 +34,14 @@ impl State {
         self.index
     }
 
+    pub fn get_states<'a>(&'a self) -> impl Iterator<Item = (usize, usize)> + 'a {
+        self.states.iter().enumerate().map(|(i, s)| (i, *s))
+    }
+
+    pub fn get_links<'a>(&'a self) -> impl Iterator<Item = (usize, Option<usize>)> + 'a {
+        self.links.iter().enumerate().map(|(i, l)| (i, *l))
+    }
+
     fn get_state(&self, automata: usize) -> usize {
         self.states[automata]
     }

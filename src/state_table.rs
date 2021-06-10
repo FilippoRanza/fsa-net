@@ -1,5 +1,6 @@
 use indexmap::IndexMap;
 
+#[derive(Debug)]
 pub struct StateTable<T> {
     table: IndexMap<T, usize>,
 }

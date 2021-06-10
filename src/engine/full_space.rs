@@ -8,6 +8,7 @@ use super::engine_utils::get_next_index;
 
 pub struct FullSpaceResult {
     pub graph: graph::Graph,
+    pub states: Vec<network::State>,
 }
 
 pub fn compute_full_space(net: &network::Network) -> FullSpaceResult {
@@ -31,9 +32,9 @@ pub fn compute_full_space(net: &network::Network) -> FullSpaceResult {
             builder.add_arc(state_index, next_index);
         }
     }
-
+    let states = table.to_state_list();
     let graph = builder.build_graph();
-    FullSpaceResult { graph }
+    FullSpaceResult { graph, states }
 }
 
 impl Into<super::NetworkResult> for FullSpaceResult {

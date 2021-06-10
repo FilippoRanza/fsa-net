@@ -23,4 +23,4 @@ pub struct CompileNetwork {
 }
 
 pub use compiler::compile;
-pub use index_name_table::GlobalIndexTable;
+pub use index_name_table::{AutomataNames, GlobalIndexTable, NetNames, NetworkIndexTable};

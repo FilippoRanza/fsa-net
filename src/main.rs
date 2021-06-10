@@ -17,10 +17,11 @@ struct Arguments {
     file: Option<path::PathBuf>,
 }
 
-fn run_request(cmds: Vec<compiler::CompileNetwork>) {
-    for cmd in &cmds {
+fn run_request(comp_res: compiler::CompileResult) {
+    for (i, cmd) in comp_res.compile_network.iter().enumerate() {
         let res = engine::run(&cmd.net, &cmd.req);
-        let res = export_results::export_results(res);
+        let net_table = comp_res.index_table.get_network_table(i);
+        let res = export_results::export_results(res, net_table);
         println!("{}", res);
     }
 }
@@ -30,5 +31,5 @@ fn main() {
     let src_code = input_output::get_fsa_code(&args.file).unwrap();
     let code = fsa_net_parser::parse(&src_code).unwrap();
     let compile_result = compiler::compile(&code).unwrap();
-    run_request(compile_result.compile_network);
+    run_request(compile_result);
 }
