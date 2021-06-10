@@ -9,10 +9,6 @@ pub struct Graph {
 }
 
 impl Graph {
-    pub fn export_graphviz(self) -> String {
-        String::new()
-    }
-
     pub fn get_adjacent_list(&self) -> &AdjList {
         &self.adjacent
     }
