@@ -10,6 +10,7 @@ use super::EngineConfig;
 pub struct FullSpaceResult {
     pub graph: graph::Graph,
     pub states: Vec<network::State>,
+    pub complete: bool,
 }
 
 pub fn compute_full_space(net: &network::Network, conf: &EngineConfig) -> FullSpaceResult {
@@ -20,9 +21,9 @@ pub fn compute_full_space(net: &network::Network, conf: &EngineConfig) -> FullSp
     let begin_index = table.insert_state(begin_state);
     stack.push_front(begin_index);
     let timer = conf.timer_factory.new_timer();
-    while let Some(state_index) = stack.pop_front()  {
+    while let Some(state_index) = stack.pop_front() {
         if timer.timeout() {
-            break
+            break;
         }
         let curr_state = table.get_object(state_index);
         if curr_state.is_final() {
@@ -38,7 +39,12 @@ pub fn compute_full_space(net: &network::Network, conf: &EngineConfig) -> FullSp
         }
     }
     let (graph, states) = conf.mode.build_graph(builder, table);
-    FullSpaceResult { graph, states }
+
+    FullSpaceResult {
+        graph,
+        states,
+        complete: stack.is_empty(),
+    }
 }
 
 impl Into<super::NetworkResult> for FullSpaceResult {
@@ -50,13 +56,13 @@ impl Into<super::NetworkResult> for FullSpaceResult {
 #[cfg(test)]
 mod test {
 
+    use super::super::EngineConfig;
+    use super::super::GraphMode;
     use super::*;
     use crate::compiler::compile;
+    use crate::timer;
     use fsa_net_parser::parse;
     use test_utils::load_code_from_file;
-    use super::super::GraphMode;
-    use super::super::EngineConfig;
-    use crate::timer;
 
     #[test]
     fn test_full_space() {

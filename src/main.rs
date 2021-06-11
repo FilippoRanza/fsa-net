@@ -10,14 +10,14 @@ mod graph;
 mod input_output;
 mod network;
 mod state_table;
-mod utils;
 mod timer;
+mod utils;
 
 #[derive(StructOpt)]
 struct Arguments {
     file: Option<path::PathBuf>,
     #[structopt(flatten)]
-    conf: EngineConfig
+    conf: EngineConfig,
 }
 
 #[derive(StructOpt)]
@@ -27,7 +27,7 @@ struct EngineConfig {
     #[structopt(short="-f", long="--full", parse(from_flag = engine::GraphMode::from_flag))]
     prune: engine::GraphMode,
     #[structopt(short="-t", long="--time-limit",parse(try_from_str = timer::parse_time_spec))]
-    time_limit: Option<u64>
+    time_limit: Option<u64>,
 }
 
 fn run_request(comp_res: compiler::CompileResult, conf: EngineConfig) {

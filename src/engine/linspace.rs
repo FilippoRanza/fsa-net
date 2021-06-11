@@ -10,9 +10,14 @@ use super::EngineConfig;
 pub struct LinSpaceResult {
     pub graph: graph::Graph,
     pub states: Vec<network::State>,
+    pub complete: bool,
 }
 
-pub fn compute_linear_space(net: &network::Network, obs_labels: &[usize], conf: &EngineConfig) -> LinSpaceResult {
+pub fn compute_linear_space(
+    net: &network::Network,
+    obs_labels: &[usize],
+    conf: &EngineConfig,
+) -> LinSpaceResult {
     let mut builder = graph::GraphBuilder::new();
     let mut table = state_table::StateTable::new();
     let mut stack = VecDeque::new();
@@ -54,7 +59,8 @@ pub fn compute_linear_space(net: &network::Network, obs_labels: &[usize], conf: 
     let (graph, states) = conf.mode.build_graph(builder, table);
     LinSpaceResult {
         graph,
-        states
+        states,
+        complete: stack.is_empty(),
     }
 }
 
@@ -97,15 +103,15 @@ impl IndexTable {
 #[cfg(test)]
 mod test {
 
+    use super::super::EngineConfig;
+    use super::super::GraphMode;
     use super::*;
     use crate::compiler::compile;
     use crate::graph::NodeKind;
+    use crate::timer;
     use crate::utils::zip;
     use fsa_net_parser::parse;
     use test_utils::load_code_from_file;
-    use super::super::GraphMode;
-    use super::super::EngineConfig;
-    use crate::timer;
 
     #[test]
     fn test_linspace() {

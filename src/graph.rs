@@ -119,9 +119,12 @@ impl GraphBuilder {
     }
 
     pub fn build_graph(self) -> Graph {
-        let mut adjacent: AdjList = zeros(self.node_kind.len());
+        let node_count = self.node_kind.len();
+        let mut adjacent: AdjList = zeros(node_count);
         for (s, d) in self.nodes_list.into_iter() {
-            adjacent[s].push(d);
+            if s < node_count && d < node_count {
+                adjacent[s].push(d);
+            }
         }
 
         let nodes = auto_sort(&mut self.node_kind.into_iter());
@@ -300,6 +303,36 @@ mod test {
             Some(4),
         ];
         assert_eq!(expect_index_map, index_map);
+    }
+
+
+    #[test]
+    fn test_build_incomplete_graph() {
+        let mut builder =GraphBuilder::new();
+        for i in 0..3 {
+            builder.add_node(i, NodeKind::Final);
+        }
+
+        let arcs = [
+            (0, 1),
+            (1, 0),
+            (1, 2),
+            (2, 1),
+            (2, 3),
+            (3, 5)
+        ];
+        for (s, d) in &arcs {
+            builder.add_arc(*s, *d);
+        }
+
+        let graph = builder.build_graph();
+        assert_eq!(graph.nodes, vec![NodeKind::Final,NodeKind::Final, NodeKind::Final]);
+        assert_eq!(graph.adjacent, vec![
+            vec![1],
+            vec![0, 2],
+            vec![1]
+        ]);
+
     }
 
     fn build_test_graph() -> Graph {

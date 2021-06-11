@@ -1,11 +1,11 @@
-use std::time;
 use std::fmt;
+use std::time;
 
 pub fn parse_time_spec(time_spec: &str) -> Result<u64, TimeSpecError> {
     if let Ok(time) = time_spec.parse() {
         Ok(time)
-    } else{
-        Err(TimeSpecError{})
+    } else {
+        Err(TimeSpecError {})
     }
 }
 
@@ -20,10 +20,8 @@ impl fmt::Display for TimeSpecError {
 
 #[derive(Default)]
 pub struct TimerFactory {
-    time_limit: Option<u64>
+    time_limit: Option<u64>,
 }
-
-
 
 impl TimerFactory {
     pub fn new_timer(&self) -> Timer {
@@ -32,21 +30,16 @@ impl TimerFactory {
         } else {
             TimerImpl::Mock
         };
-        Timer {timer}
-    }    
-    
+        Timer { timer }
+    }
+
     pub fn from_value(time_limit: Option<u64>) -> Self {
-        Self {
-            time_limit
-        }
+        Self { time_limit }
     }
 }
 
-
-
-
 pub struct Timer {
-    timer: TimerImpl
+    timer: TimerImpl,
 }
 
 impl Timer {
@@ -57,39 +50,34 @@ impl Timer {
 
 enum TimerImpl {
     Mock,
-    Real(RunningTimer)
+    Real(RunningTimer),
 }
 
 impl TimerImpl {
     fn timeout(&self) -> bool {
         match self {
             Self::Mock => false,
-            Self::Real(rt) => rt.timeout()
+            Self::Real(rt) => rt.timeout(),
         }
     }
 }
 
 struct RunningTimer {
     start: time::Instant,
-    duration: time::Duration
+    duration: time::Duration,
 }
 
 impl RunningTimer {
     fn start(time: u64) -> Self {
         let duration = time::Duration::from_micros(time);
         let start = time::Instant::now();
-        Self {
-            duration,
-            start
-        }
+        Self { duration, start }
     }
 
     fn timeout(&self) -> bool {
         self.start.elapsed() > self.duration
     }
 }
-
-
 
 #[cfg(test)]
 mod test {
@@ -98,7 +86,9 @@ mod test {
 
     #[test]
     fn test_running_timer() {
-        let factory = TimerFactory{ time_limit: Some(4)};
+        let factory = TimerFactory {
+            time_limit: Some(4),
+        };
 
         let mut count = 0;
         let timer = factory.new_timer();
@@ -107,5 +97,4 @@ mod test {
         }
         assert!(count > 0);
     }
-
 }
