@@ -5,21 +5,25 @@ use crate::state_table;
 use std::collections::VecDeque;
 
 use super::engine_utils::get_next_index;
-use super::GraphMode;
+use super::EngineConfig;
 
 pub struct FullSpaceResult {
     pub graph: graph::Graph,
     pub states: Vec<network::State>,
 }
 
-pub fn compute_full_space(net: &network::Network, mode: &GraphMode) -> FullSpaceResult {
+pub fn compute_full_space(net: &network::Network, conf: &EngineConfig) -> FullSpaceResult {
     let mut builder = graph::GraphBuilder::new();
     let mut table = state_table::StateTable::new();
     let mut stack = VecDeque::new();
     let begin_state = net.get_initial_state();
     let begin_index = table.insert_state(begin_state);
     stack.push_front(begin_index);
-    while let Some(state_index) = stack.pop_front() {
+    let timer = conf.timer_factory.new_timer();
+    while let Some(state_index) = stack.pop_front()  {
+        if timer.timeout() {
+            break
+        }
         let curr_state = table.get_object(state_index);
         if curr_state.is_final() {
             builder.add_final_node(state_index);
@@ -33,7 +37,7 @@ pub fn compute_full_space(net: &network::Network, mode: &GraphMode) -> FullSpace
             builder.add_arc(state_index, next_index);
         }
     }
-    let (graph, states) = mode.build_graph(builder, table);
+    let (graph, states) = conf.mode.build_graph(builder, table);
     FullSpaceResult { graph, states }
 }
 
@@ -51,6 +55,8 @@ mod test {
     use fsa_net_parser::parse;
     use test_utils::load_code_from_file;
     use super::super::GraphMode;
+    use super::super::EngineConfig;
+    use crate::timer;
 
     #[test]
     fn test_full_space() {
@@ -59,7 +65,9 @@ mod test {
         let comp_res = compile(&code).expect("`simple-network` should be semantically correct");
         let net = &comp_res.compile_network[0].net;
 
-        let result = compute_full_space(&net, &GraphMode::Full);
+        let config = EngineConfig::new(GraphMode::Full, timer::TimerFactory::from_value(None));
+
+        let result = compute_full_space(&net, &config);
 
         let adjacent_list = result.graph.get_adjacent_list();
         assert_eq!(adjacent_list.len(), 15);

@@ -11,6 +11,7 @@ mod input_output;
 mod network;
 mod state_table;
 mod utils;
+mod timer;
 
 #[derive(StructOpt)]
 struct Arguments {
@@ -25,11 +26,15 @@ struct EngineConfig {
     format: export_results::JsonFormat,
     #[structopt(short="-f", long="--full", parse(from_flag = engine::GraphMode::from_flag))]
     prune: engine::GraphMode,
+    #[structopt(short="-t", long="--time-limit",parse(try_from_str = timer::parse_time_spec))]
+    time_limit: Option<u64>
 }
 
 fn run_request(comp_res: compiler::CompileResult, conf: EngineConfig) {
+    let timer_factory = timer::TimerFactory::from_value(conf.time_limit);
+    let engine_config = engine::EngineConfig::new(conf.prune, timer_factory);
     for (i, cmd) in comp_res.compile_network.iter().enumerate() {
-        let res = engine::run(&cmd.net, &cmd.req, &conf.prune);
+        let res = engine::run(&cmd.net, &cmd.req, &engine_config);
         let net_table = comp_res.index_table.get_network_table(i);
         let res = export_results::export_results(res, net_table, &conf.format);
         println!("{}", res);

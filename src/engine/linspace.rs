@@ -5,14 +5,14 @@ use crate::state_table;
 use std::collections::{HashMap, VecDeque};
 
 use super::engine_utils::get_next_index;
-use super::GraphMode;
+use super::EngineConfig;
 
 pub struct LinSpaceResult {
     pub graph: graph::Graph,
     pub states: Vec<network::State>,
 }
 
-pub fn compute_linear_space(net: &network::Network, obs_labels: &[usize], mode: &GraphMode) -> LinSpaceResult {
+pub fn compute_linear_space(net: &network::Network, obs_labels: &[usize], conf: &EngineConfig) -> LinSpaceResult {
     let mut builder = graph::GraphBuilder::new();
     let mut table = state_table::StateTable::new();
     let mut stack = VecDeque::new();
@@ -21,8 +21,11 @@ pub fn compute_linear_space(net: &network::Network, obs_labels: &[usize], mode: 
     let begin_index = table.insert_state(begin_state);
     label_table.insert_begin_state(begin_index);
     stack.push_front(begin_index);
-
+    let timer = conf.timer_factory.new_timer();
     while let Some(state_index) = stack.pop_front() {
+        if timer.timeout() {
+            break;
+        }
         let curr_state = table.get_object(state_index);
         if curr_state.is_final() && curr_state.get_index() == obs_labels.len() {
             builder.add_final_node(state_index);
@@ -48,7 +51,7 @@ pub fn compute_linear_space(net: &network::Network, obs_labels: &[usize], mode: 
         }
     }
 
-    let (graph, states) = mode.build_graph(builder, table);
+    let (graph, states) = conf.mode.build_graph(builder, table);
     LinSpaceResult {
         graph,
         states
@@ -101,6 +104,8 @@ mod test {
     use fsa_net_parser::parse;
     use test_utils::load_code_from_file;
     use super::super::GraphMode;
+    use super::super::EngineConfig;
+    use crate::timer;
 
     #[test]
     fn test_linspace() {
@@ -110,8 +115,9 @@ mod test {
         let net = &comp_res.compile_network[0].net;
 
         let obs_labels = [1, 0];
+        let config = EngineConfig::new(GraphMode::Full, timer::TimerFactory::from_value(None));
 
-        let linspace = compute_linear_space(&net, &obs_labels, &GraphMode::Full);
+        let linspace = compute_linear_space(&net, &obs_labels, &config);
         let graph = &linspace.graph;
         let adjacent = graph.get_adjacent_list();
 

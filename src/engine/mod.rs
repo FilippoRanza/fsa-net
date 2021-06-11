@@ -9,11 +9,27 @@ pub use run::run;
 
 use crate::graph;
 use crate::state_table;
+use crate::timer;
 
 pub enum NetworkResult {
     FullSpace(full_space::FullSpaceResult),
     Linspace(linspace::LinSpaceResult),
 }
+
+pub struct EngineConfig {
+    mode: GraphMode,
+    timer_factory: timer::TimerFactory
+}
+
+impl EngineConfig {
+    pub fn new(mode: GraphMode, timer: timer::TimerFactory) -> Self {
+        Self  {
+            mode, 
+            timer_factory: timer
+        }
+    } 
+}
+
 
 pub enum GraphMode {
     Prune,
@@ -39,3 +55,4 @@ impl GraphMode {
         }
     }
 }
+
