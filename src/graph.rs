@@ -261,7 +261,7 @@ mod test {
             vec![4],
             vec![7],
             vec![8],
-            vec![0]
+            vec![0],
         ];
         assert_eq!(graph.adjacent, expected_adjacent);
     }
