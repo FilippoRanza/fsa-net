@@ -21,7 +21,6 @@ pub fn zip<'a, T, K>(
     list_a.iter().zip(list_b.iter())
 }
 
-
 #[macro_export]
 macro_rules! enumerate {
     ($iter: expr) => {

@@ -1,5 +1,4 @@
 use crate::utils::{auto_sort, zeros};
-use crate::enumerate;
 
 type AdjList = Vec<Vec<usize>>;
 
@@ -9,13 +8,83 @@ pub struct Graph {
     adjacent: AdjList,
 }
 
-impl Graph {
-    pub fn get_adjacent_list<'a>(&'a self) -> &'a AdjList {
+impl<'a> Graph {
+    pub fn get_adjacent_list(&'a self) -> &'a AdjList {
         &self.adjacent
     }
 
     pub fn get_node_kind_list(&self) -> &Vec<NodeKind> {
         &self.nodes
+    }
+
+    pub fn prune(self) -> Self {
+        let prune = prune_list(&self.adjacent, &self.nodes);
+        let nodes = filter_by_index(self.nodes, &prune);
+        let adjacent = remap_indexes(self.adjacent, &prune);
+        let adjacent = filter_by_index(adjacent, &prune);
+        Self { adjacent, nodes }
+    }
+}
+
+fn remap_indexes(adj: AdjList, prune: &[usize]) -> AdjList {
+    let index_map = build_index_remap(adj.len(), prune);
+    adj.into_iter()
+        .map(|v| remap_adjacent(v, &index_map))
+        .collect()
+}
+
+fn remap_adjacent(iter: Vec<usize>, remap: &[Option<usize>]) -> Vec<usize> {
+    iter.into_iter().filter_map(|i| remap[i]).collect()
+}
+
+fn build_index_remap(len: usize, prune: &[usize]) -> Vec<Option<usize>> {
+    let mut curr = 0;
+    let mut filter = FilterByIndex::new(prune);
+    (0..len)
+        .map(|i| (i, i))
+        .map(|i| filter.should_remove(i))
+        .map(|i| {
+            if let Some(i) = i {
+                Some(i - curr)
+            } else {
+                curr += 1;
+                None
+            }
+        })
+        .collect()
+}
+
+fn filter_by_index<I>(iter: I, indexes: &[usize]) -> Vec<I::Item>
+where
+    I: IntoIterator,
+{
+    let mut filter = FilterByIndex::new(indexes);
+    iter.into_iter()
+        .enumerate()
+        .filter_map(|i| filter.should_remove(i))
+        .collect()
+}
+
+struct FilterByIndex<'a> {
+    index: usize,
+    buff: &'a [usize],
+}
+
+impl<'a> FilterByIndex<'a> {
+    fn new(buff: &'a [usize]) -> Self {
+        FilterByIndex { index: 0, buff }
+    }
+
+    fn should_remove<T>(&mut self, elem: (usize, T)) -> Option<T> {
+        let (index, item) = elem;
+        if self.index >= self.buff.len() {
+            Some(item)
+        } else if index == self.buff[self.index] {
+            self.index += 1;
+            None
+        } else {
+            Some(item)
+        }
     }
 }
 
@@ -80,7 +149,7 @@ fn prune_list(adj: &AdjList, kind_list: &[NodeKind]) -> Vec<usize> {
             make_prune_list(node, adj, &mut seen, &mut reach);
         }
     }
-    
+
     reach
         .into_iter()
         .enumerate()
@@ -102,22 +171,20 @@ fn make_prune_list(
     } else {
         seen[curr] = true;
         let next = &adj[curr];
-        let next = next.iter().find(|curr| {
-            make_prune_list(**curr, adj, seen, reach)
-        });
+        let next = next
+            .iter()
+            .find(|curr| make_prune_list(**curr, adj, seen, reach));
         let stat = next.is_some();
         reach[curr] = stat;
         stat
     }
 }
 
-
-
-
 #[cfg(test)]
 mod test {
 
     use super::*;
+    use crate::enumerate;
 
     #[test]
     fn test_graph_builder() {
@@ -164,9 +231,80 @@ mod test {
 
     #[test]
     fn test_prune_list() {
-        let node_type = [true, false, false, false, true, false, false, false, false, false, false, false, false, false, false, false];
+        let graph = build_test_graph();
+        let prune = prune_list(&graph.adjacent, &graph.nodes);
+        assert_eq!(prune, vec![1, 7, 10, 12, 13, 14, 15]);
+    }
+
+    #[test]
+    fn test_graph_prune_list() {
+        let graph = build_test_graph().prune();
+        let expected_nodes = vec![
+            NodeKind::Final,
+            NodeKind::Simple,
+            NodeKind::Simple,
+            NodeKind::Final,
+            NodeKind::Simple,
+            NodeKind::Simple,
+            NodeKind::Simple,
+            NodeKind::Simple,
+            NodeKind::Simple,
+        ];
+        assert_eq!(graph.nodes, expected_nodes);
+
+        let expected_adjacent = vec![
+            vec![1, 2, 6],
+            vec![3],
+            vec![5],
+            vec![],
+            vec![3],
+            vec![4],
+            vec![7],
+            vec![8],
+            vec![0]
+        ];
+        assert_eq!(graph.adjacent, expected_adjacent);
+    }
+
+    #[test]
+    fn test_filter_by_index() {
+        let items = vec!['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'];
+        let remove_index = [2, 4, 5, 7];
+        let filter_items = filter_by_index(items, &remove_index);
+        assert_eq!(filter_items, &['a', 'b', 'd', 'g', 'i']);
+    }
+
+    #[test]
+    fn test_build_index_map() {
+        let remove_index = [2, 4, 5, 7];
+        let len = 9;
+        let index_map = build_index_remap(len, &remove_index);
+        assert_eq!(index_map.len(), len);
+        for i in &remove_index {
+            assert!(index_map[*i].is_none());
+        }
+
+        let expect_index_map = vec![
+            Some(0),
+            Some(1),
+            None,
+            Some(2),
+            None,
+            None,
+            Some(3),
+            None,
+            Some(4),
+        ];
+        assert_eq!(expect_index_map, index_map);
+    }
+
+    fn build_test_graph() -> Graph {
+        let node_type = [
+            true, false, false, false, true, false, false, false, false, false, false, false,
+            false, false, false, false,
+        ];
         let mut builder = GraphBuilder::new();
-        for (i, nt) in enumerate!{node_type} {
+        for (i, nt) in enumerate! {node_type} {
             if *nt {
                 builder.add_final_node(i);
             } else {
@@ -200,11 +338,6 @@ mod test {
             builder.add_arc(*s, *d);
         }
 
-        let graph = builder.build_graph();
-
-        let prune = prune_list(&graph.adjacent, &graph.nodes);
-        assert_eq!(prune, vec![1, 7, 10, 12, 13, 14, 15]);
+        builder.build_graph()
     }
-
-
 }
