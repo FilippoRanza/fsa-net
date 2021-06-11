@@ -5,13 +5,14 @@ use crate::state_table;
 use std::collections::{HashMap, VecDeque};
 
 use super::engine_utils::get_next_index;
+use super::GraphMode;
 
 pub struct LinSpaceResult {
     pub graph: graph::Graph,
     pub states: Vec<network::State>,
 }
 
-pub fn compute_linear_space(net: &network::Network, obs_labels: &[usize]) -> LinSpaceResult {
+pub fn compute_linear_space(net: &network::Network, obs_labels: &[usize], mode: &GraphMode) -> LinSpaceResult {
     let mut builder = graph::GraphBuilder::new();
     let mut table = state_table::StateTable::new();
     let mut stack = VecDeque::new();
@@ -47,10 +48,10 @@ pub fn compute_linear_space(net: &network::Network, obs_labels: &[usize]) -> Lin
         }
     }
 
-    let graph = builder.build_graph();
+    let (graph, states) = mode.build_graph(builder, table);
     LinSpaceResult {
         graph,
-        states: table.to_state_list(),
+        states
     }
 }
 
@@ -99,6 +100,7 @@ mod test {
     use crate::utils::zip;
     use fsa_net_parser::parse;
     use test_utils::load_code_from_file;
+    use super::super::GraphMode;
 
     #[test]
     fn test_linspace() {
@@ -109,7 +111,7 @@ mod test {
 
         let obs_labels = [1, 0];
 
-        let linspace = compute_linear_space(&net, &obs_labels);
+        let linspace = compute_linear_space(&net, &obs_labels, &GraphMode::Full);
         let graph = &linspace.graph;
         let adjacent = graph.get_adjacent_list();
 

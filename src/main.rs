@@ -15,15 +15,23 @@ mod utils;
 #[derive(StructOpt)]
 struct Arguments {
     file: Option<path::PathBuf>,
-    #[structopt(short="-p", long="--pretty", parse(from_flag = export_results::JsonFormat::new))]
-    format: export_results::JsonFormat,
+    #[structopt(flatten)]
+    conf: EngineConfig
 }
 
-fn run_request(comp_res: compiler::CompileResult, format: export_results::JsonFormat) {
+#[derive(StructOpt)]
+struct EngineConfig {
+    #[structopt(short="-p", long="--pretty", parse(from_flag = export_results::JsonFormat::new))]
+    format: export_results::JsonFormat,
+    #[structopt(short="-f", long="--full", parse(from_flag = engine::GraphMode::from_flag))]
+    prune: engine::GraphMode,
+}
+
+fn run_request(comp_res: compiler::CompileResult, conf: EngineConfig) {
     for (i, cmd) in comp_res.compile_network.iter().enumerate() {
-        let res = engine::run(&cmd.net, &cmd.req);
+        let res = engine::run(&cmd.net, &cmd.req, &conf.prune);
         let net_table = comp_res.index_table.get_network_table(i);
-        let res = export_results::export_results(res, net_table, &format);
+        let res = export_results::export_results(res, net_table, &conf.format);
         println!("{}", res);
     }
 }
@@ -33,5 +41,5 @@ fn main() {
     let src_code = input_output::get_fsa_code(&args.file).unwrap();
     let code = fsa_net_parser::parse(&src_code).unwrap();
     let compile_result = compiler::compile(&code).unwrap();
-    run_request(compile_result, args.format);
+    run_request(compile_result, args.conf);
 }

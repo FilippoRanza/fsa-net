@@ -17,12 +17,13 @@ impl<'a> Graph {
         &self.nodes
     }
 
-    pub fn prune(self) -> Self {
+    pub fn prune<T>(self, states: Vec<T>) -> (Self, Vec<T>) {
         let prune = prune_list(&self.adjacent, &self.nodes);
         let nodes = filter_by_index(self.nodes, &prune);
         let adjacent = remap_indexes(self.adjacent, &prune);
         let adjacent = filter_by_index(adjacent, &prune);
-        Self { adjacent, nodes }
+        let states = filter_by_index(states, &prune);
+        (Self { adjacent, nodes }, states)
     }
 }
 
@@ -238,7 +239,7 @@ mod test {
 
     #[test]
     fn test_graph_prune_list() {
-        let graph = build_test_graph().prune();
+        let (graph, _) = build_test_graph().prune(vec![0]);
         let expected_nodes = vec![
             NodeKind::Final,
             NodeKind::Simple,
@@ -264,6 +265,9 @@ mod test {
             vec![0],
         ];
         assert_eq!(graph.adjacent, expected_adjacent);
+
+        let prune = prune_list(&graph.adjacent, &graph.nodes);
+        assert_eq!(prune.len(), 0);
     }
 
     #[test]

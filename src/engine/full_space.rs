@@ -5,13 +5,14 @@ use crate::state_table;
 use std::collections::VecDeque;
 
 use super::engine_utils::get_next_index;
+use super::GraphMode;
 
 pub struct FullSpaceResult {
     pub graph: graph::Graph,
     pub states: Vec<network::State>,
 }
 
-pub fn compute_full_space(net: &network::Network) -> FullSpaceResult {
+pub fn compute_full_space(net: &network::Network, mode: &GraphMode) -> FullSpaceResult {
     let mut builder = graph::GraphBuilder::new();
     let mut table = state_table::StateTable::new();
     let mut stack = VecDeque::new();
@@ -32,8 +33,7 @@ pub fn compute_full_space(net: &network::Network) -> FullSpaceResult {
             builder.add_arc(state_index, next_index);
         }
     }
-    let states = table.to_state_list();
-    let graph = builder.build_graph();
+    let (graph, states) = mode.build_graph(builder, table);
     FullSpaceResult { graph, states }
 }
 
@@ -50,6 +50,7 @@ mod test {
     use crate::compiler::compile;
     use fsa_net_parser::parse;
     use test_utils::load_code_from_file;
+    use super::super::GraphMode;
 
     #[test]
     fn test_full_space() {
@@ -58,7 +59,7 @@ mod test {
         let comp_res = compile(&code).expect("`simple-network` should be semantically correct");
         let net = &comp_res.compile_network[0].net;
 
-        let result = compute_full_space(&net);
+        let result = compute_full_space(&net, &GraphMode::Full);
 
         let adjacent_list = result.graph.get_adjacent_list();
         assert_eq!(adjacent_list.len(), 15);
