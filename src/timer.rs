@@ -76,7 +76,7 @@ struct RunningTimer {
 
 impl RunningTimer {
     fn start(time: u64) -> Self {
-        let duration = time::Duration::from_millis(time);
+        let duration = time::Duration::from_micros(time);
         let start = time::Instant::now();
         Self {
             duration,
