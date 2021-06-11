@@ -65,7 +65,7 @@ fn export_full_space<'a>(
         &full_space.graph.get_node_kind_list(),
         table,
     );
-    ExportFullSpace::new(full_space.graph.get_adjacent_list(), states)
+    ExportFullSpace::new(full_space.graph.get_adjacent_list(), states, full_space.complete)
 }
 
 fn export_lin_space<'a>(
@@ -80,6 +80,7 @@ fn export_lin_space<'a>(
     ExportLinSpace {
         adjacent: lin_space.graph.get_adjacent_list(),
         states,
+        complete: lin_space.complete
     }
 }
 
@@ -105,17 +106,19 @@ impl<'a> From<ExportLinSpace<'a>> for Export<'a> {
 struct ExportFullSpace<'a> {
     adjacent: &'a Vec<Vec<usize>>,
     states: Vec<State<'a>>,
+    complete: bool
 }
 
 #[derive(Serialize)]
 struct ExportLinSpace<'a> {
     adjacent: &'a Vec<Vec<usize>>,
     states: Vec<State<'a>>,
+    complete: bool
 }
 
 impl<'a> ExportFullSpace<'a> {
-    fn new(adjacent: &'a Vec<Vec<usize>>, states: Vec<State<'a>>) -> Self {
-        Self { adjacent, states }
+    fn new(adjacent: &'a Vec<Vec<usize>>, states: Vec<State<'a>>, complete: bool) -> Self {
+        Self { adjacent, states, complete}
     }
 }
 
