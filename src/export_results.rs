@@ -115,7 +115,7 @@ struct ExportFullSpace<'a> {
 #[derive(Serialize)]
 struct ExportLinSpace<'a> {
     adjacent: Vec<Vec<Arc<'a>>>,
-    states: Vec<State<'a>>,
+    states: Vec<IndexedState<'a>>,
     complete: bool,
 }
 
@@ -129,41 +129,17 @@ impl<'a> ExportFullSpace<'a> {
     }
 }
 
-fn export_state_list<'a>(
+fn export_state_list<'a, T>(
     states: &[network::State],
     state_kinds: &[graph::NodeKind],
     table: &'a NetworkIndexTable,
-) -> Vec<State<'a>> {
+) -> Vec<T>
+where
+    T: Convert<'a>,
+{
     zip(states, state_kinds)
-        .map(|(s, k)| export_state(s, k, table))
+        .map(|(s, k)| T::convert(s, table, k))
         .collect()
-}
-
-fn export_state<'a>(
-    net_state: &network::State,
-    state_kind: &graph::NodeKind,
-    table: &'a NetworkIndexTable,
-) -> State<'a> {
-    let states = net_state
-        .get_states()
-        .map(|(auto, state)| table.get_automata_names(auto).get_state_name(state))
-        .collect();
-    let net_table = table.get_network_names();
-    let links = net_state
-        .get_links()
-        .map(|(link, content)| {
-            (
-                net_table.get_link_name(link),
-                export_content(content, net_table),
-            )
-        })
-        .collect();
-    let kind = state_kind.into();
-    State {
-        states,
-        links,
-        kind,
-    }
 }
 
 fn export_content<'a>(content: Option<usize>, table: &'a NetNames) -> Option<&'a str> {
@@ -180,6 +156,55 @@ struct State<'a> {
     states: Vec<&'a str>,
     links: Vec<(&'a str, Option<&'a str>)>,
     kind: StateKind,
+}
+
+impl<'a> Convert<'a> for State<'a> {
+    fn convert(
+        state: &network::State,
+        index: &'a NetworkIndexTable<'a>,
+        kind: &graph::NodeKind,
+    ) -> Self {
+        let states = state
+            .get_states()
+            .map(|(auto, state)| index.get_automata_names(auto).get_state_name(state))
+            .collect();
+        let net_table = index.get_network_names();
+        let links = state
+            .get_links()
+            .map(|(link, content)| {
+                (
+                    net_table.get_link_name(link),
+                    export_content(content, net_table),
+                )
+            })
+            .collect();
+        let kind = kind.into();
+        State {
+            states,
+            links,
+            kind,
+        }
+    }
+}
+
+#[derive(Serialize)]
+struct IndexedState<'a> {
+    state: State<'a>,
+    index: usize,
+}
+
+impl<'a> Convert<'a> for IndexedState<'a> {
+    fn convert(
+        state: &network::State,
+        index: &'a NetworkIndexTable<'a>,
+        kind: &graph::NodeKind,
+    ) -> Self {
+        let out_state = State::convert(state, index, kind);
+        Self {
+            state: out_state,
+            index: state.get_index(),
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -200,7 +225,7 @@ impl From<&graph::NodeKind> for StateKind {
 #[derive(Serialize)]
 struct Arc<'a> {
     next: usize,
-    ev: TransEvent<'a>
+    ev: TransEvent<'a>,
 }
 
 #[derive(Serialize)]
@@ -254,15 +279,21 @@ fn export_adjacent_list<'a>(
     adj: &[graph::Arc<network::TransEvent>],
     index_table: &'a NetworkIndexTable<'a>,
 ) -> Vec<Arc<'a>> {
-    adj.iter()
-        .map(|n| convert_arc(n, index_table))
-        .collect()
+    adj.iter().map(|n| convert_arc(n, index_table)).collect()
 }
 
-fn convert_arc<'a>(arc: &graph::Arc<network::TransEvent>, index_table: &'a NetworkIndexTable<'a>) -> Arc<'a> {
+fn convert_arc<'a>(
+    arc: &graph::Arc<network::TransEvent>,
+    index_table: &'a NetworkIndexTable<'a>,
+) -> Arc<'a> {
     let ev = TransEvent::new(&arc.label, index_table);
-    Arc {
-        next: arc.next,
-        ev
-    }
+    Arc { next: arc.next, ev }
+}
+
+trait Convert<'a> {
+    fn convert(
+        state: &network::State,
+        index: &'a NetworkIndexTable<'a>,
+        kind: &graph::NodeKind,
+    ) -> Self;
 }
