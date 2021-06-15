@@ -396,5 +396,4 @@ mod test {
             self.next == *n
         }
     }
-
 }

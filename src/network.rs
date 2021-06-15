@@ -156,6 +156,7 @@ impl Adjacent {
 
 #[derive(Default, Debug, PartialEq)]
 pub struct Transition {
+    owner: usize,
     index: usize,
     input: Option<Event>,
     output: Option<Vec<Event>>,
@@ -164,8 +165,9 @@ pub struct Transition {
 }
 
 impl Transition {
-    pub fn new(index: usize) -> Self {
+    pub fn new(owner: usize, index: usize) -> Self {
         Self {
+            owner,
             index,
             ..Default::default()
         }
@@ -230,6 +232,8 @@ impl Transition {
 
 #[derive(Debug)]
 pub struct TransEvent {
+    pub auto: usize,
+    pub trans: usize,
     pub obs: Option<usize>,
     pub rel: Option<usize>,
 }
@@ -237,6 +241,8 @@ pub struct TransEvent {
 impl From<&Transition> for TransEvent {
     fn from(trans: &Transition) -> Self {
         Self {
+            auto: trans.owner,
+            trans: trans.index,
             obs: trans.obs,
             rel: trans.rel,
         }
@@ -282,11 +288,11 @@ mod test {
         let comp_res = compile(&code).expect("`simple-network` should be semantically correct");
         let net = &comp_res.compile_network[0].net;
 
-        let trans_a_a = Transition::new(0)
+        let trans_a_a = Transition::new(0, 0)
             .set_input(Event::new(0, 0))
             .add_output(Event::new(1, 1))
             .set_observability(0);
-        let trans_b_a = Transition::new(1)
+        let trans_b_a = Transition::new(0, 1)
             .add_output(Event::new(1, 1))
             .set_relevance(0);
 
@@ -299,11 +305,11 @@ mod test {
             ],
         );
 
-        let trans_a_b = Transition::new(0)
+        let trans_a_b = Transition::new(1, 0)
             .add_output(Event::new(0, 0))
             .set_observability(1);
-        let trans_b_b = Transition::new(1).set_input(Event::new(1, 1));
-        let trans_c_b = Transition::new(2)
+        let trans_b_b = Transition::new(1, 1).set_input(Event::new(1, 1));
+        let trans_c_b = Transition::new(1, 2)
             .set_input(Event::new(1, 1))
             .set_relevance(1);
 
@@ -331,6 +337,7 @@ mod test {
     fn test_enabled_transition() {
         let state = State::initial(zeros(3), 2).fill_link(1, 3);
         let trans = Transition {
+            owner: 0,
             index: 0,
             input: Some(Event { event: 3, link: 1 }),
             output: None,
@@ -340,6 +347,7 @@ mod test {
         assert!(trans.is_enabled(&state));
 
         let trans = Transition {
+            owner: 0,
             index: 1,
             input: None,
             output: Some(vec![Event { event: 3, link: 1 }]),
@@ -349,6 +357,7 @@ mod test {
         assert!(!trans.is_enabled(&state));
 
         let trans = Transition {
+            owner: 0,
             index: 2,
             input: Some(Event { event: 3, link: 1 }),
             output: Some(vec![Event { event: 2, link: 0 }]),
@@ -367,6 +376,8 @@ mod test {
         let in_ev = 3;
         let out_ev = 2;
         let trans = Transition {
+            owner: 0,
+
             index: 0,
             input: Some(Event {
                 event: in_ev,
@@ -397,6 +408,7 @@ mod test {
         let in_ev = 3;
         let out_ev = 2;
         let trans = Transition {
+            owner: 0,
             index: 0,
             input: Some(Event {
                 event: in_ev,

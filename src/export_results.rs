@@ -65,13 +65,8 @@ fn export_full_space<'a>(
         &full_space.graph.get_node_kind_list(),
         table,
     );
-    let index_map = table.get_network_names();
-    let (adj, _) = export_adjacent_matrix(full_space.graph.get_adjacent_list(), index_map);
-    ExportFullSpace::new(
-        adj,
-        states,
-        full_space.complete,
-    )
+    let adj = export_adjacent_matrix(full_space.graph.get_adjacent_list(), table);
+    ExportFullSpace::new(adj, states, full_space.complete)
 }
 
 fn export_lin_space<'a>(
@@ -84,8 +79,7 @@ fn export_lin_space<'a>(
         table,
     );
 
-    let index_map = table.get_network_names();
-    let (adjacent, _) = export_adjacent_matrix(lin_space.graph.get_adjacent_list(), index_map);
+    let adjacent = export_adjacent_matrix(lin_space.graph.get_adjacent_list(), table);
     ExportLinSpace {
         adjacent,
         states,
@@ -113,20 +107,20 @@ impl<'a> From<ExportLinSpace<'a>> for Export<'a> {
 
 #[derive(Serialize)]
 struct ExportFullSpace<'a> {
-    adjacent: Vec<Vec<usize>>,
+    adjacent: Vec<Vec<Arc<'a>>>,
     states: Vec<State<'a>>,
     complete: bool,
 }
 
 #[derive(Serialize)]
 struct ExportLinSpace<'a> {
-    adjacent: Vec<Vec<usize>>,
+    adjacent: Vec<Vec<Arc<'a>>>,
     states: Vec<State<'a>>,
     complete: bool,
 }
 
 impl<'a> ExportFullSpace<'a> {
-    fn new(adjacent: Vec<Vec<usize>>, states: Vec<State<'a>>, complete: bool) -> Self {
+    fn new(adjacent: Vec<Vec<Arc<'a>>>, states: Vec<State<'a>>, complete: bool) -> Self {
         Self {
             adjacent,
             states,
@@ -204,17 +198,35 @@ impl From<&graph::NodeKind> for StateKind {
 }
 
 #[derive(Serialize)]
+struct Arc<'a> {
+    next: usize,
+    ev: TransEvent<'a>
+}
+
+#[derive(Serialize)]
 struct TransEvent<'a> {
-    
+    src: &'a str,
+    name: &'a str,
     rel: Option<&'a str>,
     obs: Option<&'a str>,
 }
 
 impl<'a> TransEvent<'a> {
-    fn new(te: &network::TransEvent, map: &'a NetNames<'a>) -> Self {
+    fn new(te: &network::TransEvent, index_table: &'a NetworkIndexTable<'a>) -> Self {
+        let map = index_table.get_network_names();
         let obs = map_option(&te.obs, |v| map.get_obs_name(v));
         let rel = map_option(&te.rel, |v| map.get_rel_name(v));
-        Self { obs, rel }
+
+        let map = index_table.get_automata_names(te.auto);
+        let src = map.get_name();
+        let name = map.get_transition_name(te.trans);
+
+        Self {
+            obs,
+            rel,
+            name,
+            src,
+        }
     }
 }
 
@@ -231,47 +243,26 @@ where
 
 fn export_adjacent_matrix<'a>(
     adj: &graph::AdjList<network::TransEvent>,
-    index_table: &'a NetNames<'a>,
-) -> (Vec<Vec<usize>>, Vec<Vec<TransEvent<'a>>>) {
-    let len = adj.len();
+    index_table: &'a NetworkIndexTable<'a>,
+) -> Vec<Vec<Arc<'a>>> {
     adj.iter()
         .map(|l| export_adjacent_list(l, index_table))
-        .fold(SplitTuple::new(len), |a, c| a.push(c))
-        .to_tuple()
+        .collect()
 }
 
 fn export_adjacent_list<'a>(
     adj: &[graph::Arc<network::TransEvent>],
-    index_table: &'a NetNames<'a>,
-) -> (Vec<usize>, Vec<TransEvent<'a>>) {
-    let len = adj.len();
+    index_table: &'a NetworkIndexTable<'a>,
+) -> Vec<Arc<'a>> {
     adj.iter()
-        .map(|n| (n.next, TransEvent::new(&n.label, index_table)))
-        .fold(SplitTuple::new(len), |a, c| a.push(c))
-        .to_tuple()
+        .map(|n| convert_arc(n, index_table))
+        .collect()
 }
 
-struct SplitTuple<T, K> {
-    vec_t: Vec<T>,
-    vec_k: Vec<K>,
-}
-
-impl<T, K> SplitTuple<T, K> {
-    fn new(len: usize) -> Self {
-        Self {
-            vec_k: Vec::with_capacity(len),
-            vec_t: Vec::with_capacity(len),
-        }
-    }
-
-    fn push(mut self, item: (T, K)) -> Self {
-        let (t, k) = item;
-        self.vec_k.push(k);
-        self.vec_t.push(t);
-        self
-    }
-
-    fn to_tuple(self) -> (Vec<T>, Vec<K>) {
-        (self.vec_t, self.vec_k)
+fn convert_arc<'a>(arc: &graph::Arc<network::TransEvent>, index_table: &'a NetworkIndexTable<'a>) -> Arc<'a> {
+    let ev = TransEvent::new(&arc.label, index_table);
+    Arc {
+        next: arc.next,
+        ev
     }
 }

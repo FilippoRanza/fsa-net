@@ -59,8 +59,9 @@ fn compile_transition(
 ) {
     let src_state = table.get_automata_name_index(net_name, auto_name, trans.source);
     let dst_state = table.get_automata_name_index(net_name, auto_name, trans.destination);
+    let owner = table.get_network_name_index(net_name, auto_name);
     let index = table.get_automata_name_index(net_name, auto_name, trans.name);
-    let out_trans = network::Transition::new(index);
+    let out_trans = network::Transition::new(owner, index);
 
     let out_trans = if let Some(input) = &trans.input {
         let event = compile_event(input, table, net_name);
