@@ -8,7 +8,7 @@ use super::engine_utils::get_next_index;
 use super::EngineConfig;
 
 pub struct FullSpaceResult {
-    pub graph: graph::Graph,
+    pub graph: graph::Graph<network::TransEvent>,
     pub states: Vec<network::State>,
     pub complete: bool,
 }
@@ -33,9 +33,9 @@ pub fn compute_full_space(net: &network::Network, conf: &EngineConfig) -> FullSp
         }
 
         let next_state = net.step_one(curr_state);
-        for (_, next_state) in next_state.into_iter() {
+        for (ev, next_state) in next_state.into_iter() {
             let next_index = get_next_index(next_state, &mut table, &mut stack);
-            builder.add_arc(state_index, next_index);
+            builder.add_arc(state_index, next_index, ev);
         }
     }
     let (graph, states) = conf.mode.build_graph(builder, table);

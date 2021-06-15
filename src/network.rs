@@ -224,6 +224,7 @@ impl Transition {
     }
 }
 
+#[derive(Debug)]
 pub struct TransEvent {
     pub obs: Option<usize>,
     pub rel: Option<usize>,

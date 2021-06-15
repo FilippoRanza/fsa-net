@@ -8,7 +8,7 @@ use super::engine_utils::get_next_index;
 use super::EngineConfig;
 
 pub struct LinSpaceResult {
-    pub graph: graph::Graph,
+    pub graph: graph::Graph<network::TransEvent>,
     pub states: Vec<network::State>,
     pub complete: bool,
 }
@@ -45,12 +45,12 @@ pub fn compute_linear_space(
                     let next_state = next_state.set_index(obs_index + 1);
                     let next_index = get_next_index(next_state, &mut table, &mut stack);
                     label_table.insert_next_index_state(state_index, next_index);
-                    builder.add_arc(state_index, next_index);
+                    builder.add_arc(state_index, next_index, event);
                 }
             } else {
                 let next_state = next_state.set_index(obs_index);
                 let next_index = get_next_index(next_state, &mut table, &mut stack);
-                builder.add_arc(state_index, next_index);
+                builder.add_arc(state_index, next_index, event);
                 label_table.copy_state_index(state_index, next_index);
             }
         }

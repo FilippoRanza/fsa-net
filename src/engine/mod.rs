@@ -44,11 +44,11 @@ impl GraphMode {
         }
     }
 
-    fn build_graph<T>(
+    fn build_graph<T, K>(
         &self,
-        builder: graph::GraphBuilder,
+        builder: graph::GraphBuilder<K>,
         table: state_table::StateTable<T>,
-    ) -> (graph::Graph, Vec<T>)
+    ) -> (graph::Graph<K>, Vec<T>)
     where
         T: Eq + std::hash::Hash,
     {

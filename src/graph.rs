@@ -1,15 +1,37 @@
 use crate::utils::{auto_sort, zeros};
 
-type AdjList = Vec<Vec<usize>>;
+pub type AdjList<T> = Vec<Vec<Arc<T>>>;
 
 #[derive(Debug)]
-pub struct Graph {
-    nodes: Vec<NodeKind>,
-    adjacent: AdjList,
+pub struct Arc<T> {
+    pub label: T,
+    pub next: usize,
 }
 
-impl<'a> Graph {
-    pub fn get_adjacent_list(&'a self) -> &'a AdjList {
+impl<T> Arc<T> {
+    fn new(next: usize, label: T) -> Self {
+        Self { next, label }
+    }
+
+    fn remap(mut self, mapper: &[Option<usize>]) -> Option<Self> {
+        let map = mapper[self.next];
+        if let Some(next) = map {
+            self.next = next;
+            Some(self)
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Graph<T> {
+    nodes: Vec<NodeKind>,
+    adjacent: AdjList<T>,
+}
+
+impl<'a, T> Graph<T> {
+    pub fn get_adjacent_list(&'a self) -> &'a AdjList<T> {
         &self.adjacent
     }
 
@@ -17,7 +39,7 @@ impl<'a> Graph {
         &self.nodes
     }
 
-    pub fn prune<T>(self, states: Vec<T>) -> (Self, Vec<T>) {
+    pub fn prune<K>(self, states: Vec<K>) -> (Self, Vec<K>) {
         let prune = prune_list(&self.adjacent, &self.nodes);
         let nodes = filter_by_index(self.nodes, &prune);
         let adjacent = remap_indexes(self.adjacent, &prune);
@@ -27,15 +49,15 @@ impl<'a> Graph {
     }
 }
 
-fn remap_indexes(adj: AdjList, prune: &[usize]) -> AdjList {
+fn remap_indexes<T>(adj: AdjList<T>, prune: &[usize]) -> AdjList<T> {
     let index_map = build_index_remap(adj.len(), prune);
     adj.into_iter()
         .map(|v| remap_adjacent(v, &index_map))
         .collect()
 }
 
-fn remap_adjacent(iter: Vec<usize>, remap: &[Option<usize>]) -> Vec<usize> {
-    iter.into_iter().filter_map(|i| remap[i]).collect()
+fn remap_adjacent<T>(iter: Vec<Arc<T>>, remap: &[Option<usize>]) -> Vec<Arc<T>> {
+    iter.into_iter().filter_map(|i| i.remap(remap)).collect()
 }
 
 fn build_index_remap(len: usize, prune: &[usize]) -> Vec<Option<usize>> {
@@ -89,12 +111,12 @@ impl<'a> FilterByIndex<'a> {
     }
 }
 
-pub struct GraphBuilder {
-    nodes_list: Vec<(usize, usize)>,
+pub struct GraphBuilder<T> {
+    nodes_list: Vec<(usize, usize, T)>,
     node_kind: Vec<(NodeKind, usize)>,
 }
 
-impl GraphBuilder {
+impl<T> GraphBuilder<T> {
     pub fn new() -> Self {
         Self {
             nodes_list: Vec::new(),
@@ -114,16 +136,17 @@ impl GraphBuilder {
         self.node_kind.push((kind, index));
     }
 
-    pub fn add_arc(&mut self, src: usize, dst: usize) {
-        self.nodes_list.push((src, dst));
+    pub fn add_arc(&mut self, src: usize, dst: usize, t: T) {
+        self.nodes_list.push((src, dst, t));
     }
 
-    pub fn build_graph(self) -> Graph {
+    pub fn build_graph(self) -> Graph<T> {
         let node_count = self.node_kind.len();
-        let mut adjacent: AdjList = zeros(node_count);
-        for (s, d) in self.nodes_list.into_iter() {
+        let mut adjacent: AdjList<T> = zeros(node_count);
+        for (s, d, t) in self.nodes_list.into_iter() {
             if s < node_count && d < node_count {
-                adjacent[s].push(d);
+                let arc = Arc::new(d, t);
+                adjacent[s].push(arc);
             }
         }
 
@@ -138,7 +161,7 @@ pub enum NodeKind {
     Final,
 }
 
-fn prune_list(adj: &AdjList, kind_list: &[NodeKind]) -> Vec<usize> {
+fn prune_list<T>(adj: &AdjList<T>, kind_list: &[NodeKind]) -> Vec<usize> {
     let mut reach: Vec<bool> = kind_list
         .iter()
         .map(|k| match k {
@@ -161,9 +184,9 @@ fn prune_list(adj: &AdjList, kind_list: &[NodeKind]) -> Vec<usize> {
         .collect()
 }
 
-fn make_prune_list(
+fn make_prune_list<T>(
     curr: usize,
-    adj: &AdjList,
+    adj: &AdjList<T>,
     seen: &mut Vec<bool>,
     reach: &mut Vec<bool>,
 ) -> bool {
@@ -177,7 +200,7 @@ fn make_prune_list(
         let next = &adj[curr];
         let next = next
             .iter()
-            .find(|curr| make_prune_list(**curr, adj, seen, reach));
+            .find(|curr| make_prune_list(curr.next, adj, seen, reach));
         let stat = next.is_some();
         reach[curr] = stat;
         stat
@@ -212,7 +235,7 @@ mod test {
             // terrible :-(
             let s = nodes.iter().position(|n| n == s).unwrap();
             let d = nodes.iter().position(|n| n == d).unwrap();
-            builder.add_arc(s, d);
+            builder.add_arc(s, d, ());
         }
 
         let graph = builder.build_graph();
@@ -305,37 +328,27 @@ mod test {
         assert_eq!(expect_index_map, index_map);
     }
 
-
     #[test]
     fn test_build_incomplete_graph() {
-        let mut builder =GraphBuilder::new();
+        let mut builder = GraphBuilder::new();
         for i in 0..3 {
             builder.add_node(i, NodeKind::Final);
         }
 
-        let arcs = [
-            (0, 1),
-            (1, 0),
-            (1, 2),
-            (2, 1),
-            (2, 3),
-            (3, 5)
-        ];
+        let arcs = [(0, 1), (1, 0), (1, 2), (2, 1), (2, 3), (3, 5)];
         for (s, d) in &arcs {
-            builder.add_arc(*s, *d);
+            builder.add_arc(*s, *d, ());
         }
 
         let graph = builder.build_graph();
-        assert_eq!(graph.nodes, vec![NodeKind::Final,NodeKind::Final, NodeKind::Final]);
-        assert_eq!(graph.adjacent, vec![
-            vec![1],
-            vec![0, 2],
-            vec![1]
-        ]);
-
+        assert_eq!(
+            graph.nodes,
+            vec![NodeKind::Final, NodeKind::Final, NodeKind::Final]
+        );
+        assert_eq!(graph.adjacent, vec![vec![1], vec![0, 2], vec![1]]);
     }
 
-    fn build_test_graph() -> Graph {
+    fn build_test_graph() -> Graph<()> {
         let node_type = [
             true, false, false, false, true, false, false, false, false, false, false, false,
             false, false, false, false,
@@ -372,9 +385,16 @@ mod test {
         ];
 
         for (s, d) in &arcs {
-            builder.add_arc(*s, *d);
+            builder.add_arc(*s, *d, ());
         }
 
         builder.build_graph()
     }
+
+    impl<T> PartialEq<usize> for Arc<T> {
+        fn eq(&self, n: &usize) -> bool {
+            self.next == *n
+        }
+    }
+
 }

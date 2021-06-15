@@ -1,6 +1,6 @@
 use crate::compiler::{NetNames, NetworkIndexTable};
 use crate::engine::{FullSpaceResult, LinSpaceResult, NetworkResult};
-use crate::graph::NodeKind;
+use crate::graph;
 use crate::network;
 use crate::utils::zip;
 use serde::Serialize;
@@ -65,7 +65,13 @@ fn export_full_space<'a>(
         &full_space.graph.get_node_kind_list(),
         table,
     );
-    ExportFullSpace::new(full_space.graph.get_adjacent_list(), states, full_space.complete)
+    let index_map = table.get_network_names();
+    let (adj, _) = export_adjacent_matrix(full_space.graph.get_adjacent_list(), index_map);
+    ExportFullSpace::new(
+        adj,
+        states,
+        full_space.complete,
+    )
 }
 
 fn export_lin_space<'a>(
@@ -77,10 +83,13 @@ fn export_lin_space<'a>(
         &lin_space.graph.get_node_kind_list(),
         table,
     );
+
+    let index_map = table.get_network_names();
+    let (adjacent, _) = export_adjacent_matrix(lin_space.graph.get_adjacent_list(), index_map);
     ExportLinSpace {
-        adjacent: lin_space.graph.get_adjacent_list(),
+        adjacent,
         states,
-        complete: lin_space.complete
+        complete: lin_space.complete,
     }
 }
 
@@ -104,27 +113,31 @@ impl<'a> From<ExportLinSpace<'a>> for Export<'a> {
 
 #[derive(Serialize)]
 struct ExportFullSpace<'a> {
-    adjacent: &'a Vec<Vec<usize>>,
+    adjacent: Vec<Vec<usize>>,
     states: Vec<State<'a>>,
-    complete: bool
+    complete: bool,
 }
 
 #[derive(Serialize)]
 struct ExportLinSpace<'a> {
-    adjacent: &'a Vec<Vec<usize>>,
+    adjacent: Vec<Vec<usize>>,
     states: Vec<State<'a>>,
-    complete: bool
+    complete: bool,
 }
 
 impl<'a> ExportFullSpace<'a> {
-    fn new(adjacent: &'a Vec<Vec<usize>>, states: Vec<State<'a>>, complete: bool) -> Self {
-        Self { adjacent, states, complete}
+    fn new(adjacent: Vec<Vec<usize>>, states: Vec<State<'a>>, complete: bool) -> Self {
+        Self {
+            adjacent,
+            states,
+            complete,
+        }
     }
 }
 
 fn export_state_list<'a>(
     states: &[network::State],
-    state_kinds: &[NodeKind],
+    state_kinds: &[graph::NodeKind],
     table: &'a NetworkIndexTable,
 ) -> Vec<State<'a>> {
     zip(states, state_kinds)
@@ -134,7 +147,7 @@ fn export_state_list<'a>(
 
 fn export_state<'a>(
     net_state: &network::State,
-    state_kind: &NodeKind,
+    state_kind: &graph::NodeKind,
     table: &'a NetworkIndexTable,
 ) -> State<'a> {
     let states = net_state
@@ -181,11 +194,82 @@ enum StateKind {
     Final,
 }
 
-impl From<&NodeKind> for StateKind {
-    fn from(nk: &NodeKind) -> Self {
+impl From<&graph::NodeKind> for StateKind {
+    fn from(nk: &graph::NodeKind) -> Self {
         match nk {
-            NodeKind::Final => Self::Final,
-            NodeKind::Simple => Self::Simple,
+            graph::NodeKind::Final => Self::Final,
+            graph::NodeKind::Simple => Self::Simple,
         }
+    }
+}
+
+struct TransEvent<'a> {
+    rel: Option<&'a str>,
+    obs: Option<&'a str>,
+}
+
+impl<'a> TransEvent<'a> {
+    fn new(te: &network::TransEvent, map: &'a NetNames<'a>) -> Self {
+        let obs = map_option(&te.obs, |v| map.get_obs_name(v));
+        let rel = map_option(&te.rel, |v| map.get_rel_name(v));
+        Self { obs, rel }
+    }
+}
+
+fn map_option<'a, F>(op: &Option<usize>, map: F) -> Option<&'a str>
+where
+    F: Fn(usize) -> &'a str,
+{
+    if let Some(v) = op {
+        Some(map(*v))
+    } else {
+        None
+    }
+}
+
+fn export_adjacent_matrix<'a>(
+    adj: &graph::AdjList<network::TransEvent>,
+    index_table: &'a NetNames<'a>,
+) -> (Vec<Vec<usize>>, Vec<Vec<TransEvent<'a>>>) {
+    let len = adj.len();
+    adj.iter()
+        .map(|l| export_adjacent_list(l, index_table))
+        .fold(SplitTuple::new(len), |a, c| a.push(c))
+        .to_tuple()
+}
+
+fn export_adjacent_list<'a>(
+    adj: &[graph::Arc<network::TransEvent>],
+    index_table: &'a NetNames<'a>,
+) -> (Vec<usize>, Vec<TransEvent<'a>>) {
+    let len = adj.len();
+    adj.iter()
+        .map(|n| (n.next, TransEvent::new(&n.label, index_table)))
+        .fold(SplitTuple::new(len), |a, c| a.push(c))
+        .to_tuple()
+}
+
+struct SplitTuple<T, K> {
+    vec_t: Vec<T>,
+    vec_k: Vec<K>,
+}
+
+impl<T, K> SplitTuple<T, K> {
+    fn new(len: usize) -> Self {
+        Self {
+            vec_k: Vec::with_capacity(len),
+            vec_t: Vec::with_capacity(len),
+        }
+    }
+
+    fn push(mut self, item: (T, K)) -> Self {
+        let (t, k) = item;
+        self.vec_k.push(k);
+        self.vec_t.push(t);
+        self
+    }
+
+    fn to_tuple(self) -> (Vec<T>, Vec<K>) {
+        (self.vec_t, self.vec_k)
     }
 }
