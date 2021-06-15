@@ -190,6 +190,7 @@ fn make_prune_list<T>(
     seen: &mut Vec<bool>,
     reach: &mut Vec<bool>,
 ) -> bool {
+    println!("{}, {}", curr, seen[curr]);
     if seen[curr] {
         reach[curr]
     } else if reach[curr] {
