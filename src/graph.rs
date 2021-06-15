@@ -262,6 +262,67 @@ mod test {
         let prune = prune_list(&graph.adjacent, &graph.nodes);
         assert_eq!(prune, vec![1, 7, 10, 12, 13, 14, 15]);
     }
+    #[test]
+    fn test_prune_list_2() {
+        let mut builder = GraphBuilder::new();
+
+        let node_type = [
+            true,
+            false,
+            false,
+            true,
+            false, 
+            true,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false, 
+            false
+        ];
+        assert_eq!(node_type.len(), 15);
+
+        for (i, nt) in node_type.iter().enumerate() {
+            if *nt {
+                builder.add_final_node(i);
+            } else {
+                builder.add_simple_node(i);
+            }
+        }
+
+        let arcs = [
+            (0, 1),
+            (1, 2),
+            (2, 3),
+            (2, 6),
+            (3, 4),
+            (4, 5),
+            (4, 0),
+            (6, 7),
+            (6, 12),
+            (7, 8),
+            (8, 9),
+            (9, 10),
+            (10, 11),
+            (11, 12),
+            (12, 8),
+            (11, 13),
+            (13, 14)
+        ];
+
+        for (s, d) in &arcs {
+            builder.add_arc(*s, *d, ());
+        }
+
+        let graph = builder.build_graph();
+        let prune = prune_list(&graph.adjacent, &graph.nodes);
+        assert_eq!(prune, vec![13, 14], "{:?}", prune);
+    
+
+    }
 
     #[test]
     fn test_graph_prune_list() {
