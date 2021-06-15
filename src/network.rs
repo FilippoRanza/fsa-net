@@ -156,6 +156,7 @@ impl Adjacent {
 
 #[derive(Default, Debug, PartialEq)]
 pub struct Transition {
+    index: usize,
     input: Option<Event>,
     output: Option<Vec<Event>>,
     rel: Option<usize>,
@@ -163,8 +164,11 @@ pub struct Transition {
 }
 
 impl Transition {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(index: usize) -> Self {
+        Self {
+            index,
+            ..Default::default()
+        }
     }
 
     pub fn set_input(mut self, ev: Event) -> Self {
@@ -278,11 +282,11 @@ mod test {
         let comp_res = compile(&code).expect("`simple-network` should be semantically correct");
         let net = &comp_res.compile_network[0].net;
 
-        let trans_a_a = Transition::new()
+        let trans_a_a = Transition::new(0)
             .set_input(Event::new(0, 0))
             .add_output(Event::new(1, 1))
             .set_observability(0);
-        let trans_b_a = Transition::new()
+        let trans_b_a = Transition::new(1)
             .add_output(Event::new(1, 1))
             .set_relevance(0);
 
@@ -295,11 +299,11 @@ mod test {
             ],
         );
 
-        let trans_a_b = Transition::new()
+        let trans_a_b = Transition::new(0)
             .add_output(Event::new(0, 0))
             .set_observability(1);
-        let trans_b_b = Transition::new().set_input(Event::new(1, 1));
-        let trans_c_b = Transition::new()
+        let trans_b_b = Transition::new(1).set_input(Event::new(1, 1));
+        let trans_c_b = Transition::new(2)
             .set_input(Event::new(1, 1))
             .set_relevance(1);
 
@@ -327,6 +331,7 @@ mod test {
     fn test_enabled_transition() {
         let state = State::initial(zeros(3), 2).fill_link(1, 3);
         let trans = Transition {
+            index: 0,
             input: Some(Event { event: 3, link: 1 }),
             output: None,
             rel: None,
@@ -335,6 +340,7 @@ mod test {
         assert!(trans.is_enabled(&state));
 
         let trans = Transition {
+            index: 1,
             input: None,
             output: Some(vec![Event { event: 3, link: 1 }]),
             rel: None,
@@ -343,6 +349,7 @@ mod test {
         assert!(!trans.is_enabled(&state));
 
         let trans = Transition {
+            index: 2,
             input: Some(Event { event: 3, link: 1 }),
             output: Some(vec![Event { event: 2, link: 0 }]),
             rel: None,
@@ -360,6 +367,7 @@ mod test {
         let in_ev = 3;
         let out_ev = 2;
         let trans = Transition {
+            index: 0,
             input: Some(Event {
                 event: in_ev,
                 link: in_link,
@@ -389,6 +397,7 @@ mod test {
         let in_ev = 3;
         let out_ev = 2;
         let trans = Transition {
+            index: 0,
             input: Some(Event {
                 event: in_ev,
                 link: in_link,

@@ -203,7 +203,9 @@ impl From<&graph::NodeKind> for StateKind {
     }
 }
 
+#[derive(Serialize)]
 struct TransEvent<'a> {
+    
     rel: Option<&'a str>,
     obs: Option<&'a str>,
 }
