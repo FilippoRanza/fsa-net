@@ -161,6 +161,8 @@ pub enum NodeKind {
     Final,
 }
 
+
+
 fn prune_list<T>(adj: &AdjList<T>, kind_list: &[NodeKind]) -> Vec<usize> {
     let mut reach: Vec<bool> = kind_list
         .iter()
@@ -172,8 +174,11 @@ fn prune_list<T>(adj: &AdjList<T>, kind_list: &[NodeKind]) -> Vec<usize> {
     let mut seen = reach.clone();
 
     for node in 0..adj.len() {
-        if !seen[node] {
-            make_prune_list(node, adj, &mut seen, &mut reach);
+        if !reach[node] {
+            make_prune_list(node, adj, &mut seen, &mut reach); 
+            for s in seen.iter_mut() {
+                *s = false;
+            }
         }
     }
 
@@ -190,7 +195,6 @@ fn make_prune_list<T>(
     seen: &mut Vec<bool>,
     reach: &mut Vec<bool>,
 ) -> bool {
-    println!("{}, {}", curr, seen[curr]);
     if seen[curr] {
         reach[curr]
     } else if reach[curr] {
@@ -200,8 +204,8 @@ fn make_prune_list<T>(
         seen[curr] = true;
         let next = &adj[curr];
         let next = next
-            .iter()
-            .find(|curr| make_prune_list(curr.next, adj, seen, reach));
+        .iter()
+        .find(|curr| make_prune_list(curr.next, adj, seen, reach));
         let stat = next.is_some();
         reach[curr] = stat;
         stat
@@ -306,6 +310,7 @@ mod test {
             (6, 12),
             (7, 8),
             (8, 9),
+            (8, 1),
             (9, 10),
             (10, 11),
             (11, 12),
