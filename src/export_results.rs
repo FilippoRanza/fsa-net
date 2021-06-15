@@ -144,7 +144,7 @@ where
 
 fn export_content<'a>(content: Option<usize>, table: &'a NetNames) -> Option<&'a str> {
     if let Some(content) = content {
-        let content = table.get_obs_name(content);
+        let content = table.get_ev_name(content);
         Some(content)
     } else {
         None
