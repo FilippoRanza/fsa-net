@@ -20,9 +20,9 @@ pub fn compute_full_space(net: &network::Network, conf: &EngineConfig) -> FullSp
     let begin_state = net.get_initial_state();
     let begin_index = table.insert_state(begin_state);
     stack.push_front(begin_index);
+    let mut timeout = false;
     let timer = conf.timer_factory.new_timer();
-    let mut has_next = true;
-    while let Some(state_index) = get_next_state(&mut stack, &timer) {
+    while let Some(state_index) = get_next_state(&mut stack, &timer, &mut timeout) {
         let curr_state = table.get_object(state_index);
         if curr_state.is_final() {
             builder.add_final_node(state_index);
@@ -31,20 +31,18 @@ pub fn compute_full_space(net: &network::Network, conf: &EngineConfig) -> FullSp
         }
 
         let next_state = net.step_one(curr_state);
-        let mut has_new = false;
         for (ev, next_state) in next_state.into_iter() {
-            let (next_index, is_new) = get_next_index(next_state, &mut table, &mut stack);
+            let next_index = get_next_index(next_state, &mut table, &mut stack);
             builder.add_arc(state_index, next_index, ev);
-            has_new |= is_new;
+            
         }
-        has_next = has_new;
     }
     let (graph, states) = conf.mode.build_graph(builder, table);
 
     FullSpaceResult {
         graph,
         states,
-        complete: stack.is_empty() && (!has_next),
+        complete: !timeout,
     }
 }
 

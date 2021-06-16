@@ -56,5 +56,6 @@ network TestNetwork {
 
 request TestNetwork {
     space
+    linspace o3, o2
     diagnosis o3, o2
 }

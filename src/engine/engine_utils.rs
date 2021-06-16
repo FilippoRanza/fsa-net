@@ -6,21 +6,22 @@ pub fn get_next_index<T>(
     stat: T,
     table: &mut state_table::StateTable<T>,
     stack: &mut VecDeque<usize>,
-) -> (usize, bool)
+) -> usize
 where
     T: Eq + std::hash::Hash,
 {
     if !table.is_present(&stat) {
         let tmp_index = table.insert_state(stat);
         stack.push_front(tmp_index);
-        (tmp_index, true)
+        tmp_index
     } else {
-        (table.get_index(&stat).unwrap(), false)
+        table.get_index(&stat).unwrap()
     }
 }
 
-pub fn get_next_state<T>(stack: &mut VecDeque<T>, timer: &timer::Timer) -> Option<T> {
+pub fn get_next_state<T>(stack: &mut VecDeque<T>, timer: &timer::Timer, flag: &mut bool) -> Option<T> {
     if timer.timeout() {
+        *flag = true;
         None
     } else {
         stack.pop_front()
