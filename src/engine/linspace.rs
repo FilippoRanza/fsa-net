@@ -4,7 +4,7 @@ use crate::state_table;
 
 use std::collections::{HashMap, VecDeque};
 
-use super::engine_utils::get_next_index;
+use super::engine_utils::{get_next_index, get_next_state};
 use super::EngineConfig;
 
 pub struct LinSpaceResult {
@@ -27,10 +27,8 @@ pub fn compute_linear_space(
     label_table.insert_begin_state(begin_index);
     stack.push_front(begin_index);
     let timer = conf.timer_factory.new_timer();
-    while let Some(state_index) = stack.pop_front() {
-        if timer.timeout() {
-            break;
-        }
+    let mut has_next = true;
+    while let Some(state_index) = get_next_state(&mut stack, &timer) {
         let curr_state = table.get_object(state_index);
         if curr_state.is_final() && curr_state.get_index() == obs_labels.len() {
             builder.add_final_node(state_index);
@@ -38,29 +36,32 @@ pub fn compute_linear_space(
             builder.add_simple_node(state_index);
         }
         let next_state = net.step_one(curr_state);
+        let mut has_new = false;
         for (event, next_state) in next_state.into_iter() {
             let obs_index = label_table.get_index(state_index);
             if let Some(obs) = event.obs {
                 if obs_index < obs_labels.len() && obs == obs_labels[obs_index] {
                     let next_state = next_state.set_index(obs_index + 1);
-                    let next_index = get_next_index(next_state, &mut table, &mut stack);
+                    let (next_index, is_new) = get_next_index(next_state, &mut table, &mut stack);
                     label_table.insert_next_index_state(state_index, next_index);
                     builder.add_arc(state_index, next_index, event);
+                    has_new |= is_new;
                 }
             } else {
                 let next_state = next_state.set_index(obs_index);
-                let next_index = get_next_index(next_state, &mut table, &mut stack);
+                let (next_index, is_new) = get_next_index(next_state, &mut table, &mut stack);
                 builder.add_arc(state_index, next_index, event);
                 label_table.copy_state_index(state_index, next_index);
+                has_new |= is_new;
             }
         }
+        has_next = has_new;
     }
-
     let (graph, states) = conf.mode.build_graph(builder, table);
     LinSpaceResult {
         graph,
         states,
-        complete: stack.is_empty(),
+        complete: stack.is_empty() && (!has_next),
     }
 }
 

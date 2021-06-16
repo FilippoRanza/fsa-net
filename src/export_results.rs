@@ -57,14 +57,21 @@ fn export_result<'a>(result: &'a NetworkResult, table: &'a NetworkIndexTable<'a>
     }
 }
 
-fn export_diagnosis<'a>(
-    diag: &DiagnosisResult,
-    table: &'a NetworkIndexTable<'a>,
+fn export_diagnosis(diag: &DiagnosisResult, table: &NetworkIndexTable) -> ExportDiagnosis {
+    if let Some(matrix) = &diag.matrix {
+        export_existing_diagnosis(&matrix, table)
+    } else {
+        ExportDiagnosis { regex: None }
+    }
+}
+
+fn export_existing_diagnosis(
+    matrix: &Vec<Vec<usize>>,
+    table: &NetworkIndexTable,
 ) -> ExportDiagnosis {
     let mut optional = false;
     let table = table.get_network_names();
-    let options: Vec<String> = diag
-        .matrix
+    let options: Vec<String> = matrix
         .iter()
         .filter(|row| {
             if row.len() == 0 {
@@ -83,11 +90,10 @@ fn export_diagnosis<'a>(
     } else {
         regex
     };
-
-    ExportDiagnosis{ regex }
+    ExportDiagnosis { regex: Some(regex) }
 }
 
-fn export_diagnosis_variant<'a>(row: &[usize], table: &'a NetNames<'a>) -> String {
+fn export_diagnosis_variant(row: &[usize], table: &NetNames) -> String {
     row.iter()
         .map(|e| table.get_rel_name(*e))
         .fold(String::new(), |acc, curr| acc + curr)
@@ -126,7 +132,7 @@ fn export_lin_space<'a>(
 
 #[derive(Serialize)]
 struct ExportDiagnosis {
-    regex: String
+    regex: Option<String>,
 }
 
 #[derive(Serialize)]
