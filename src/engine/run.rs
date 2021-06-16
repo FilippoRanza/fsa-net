@@ -3,6 +3,7 @@ use crate::network;
 
 use super::full_space;
 use super::linspace;
+use super::diagnosis;
 use super::NetworkResult;
 
 pub fn run(
@@ -26,6 +27,9 @@ fn run_request(
         command::Command::Linspace(obs_labels) => {
             linspace::compute_linear_space(net, obs_labels, conf).into()
         }
-        command::Command::Diagnosis(_obs_labels) => unimplemented!(),
+        command::Command::Diagnosis(obs_labels) => {
+            let tmp = linspace::compute_linear_space(net, obs_labels, conf);
+            diagnosis::diagnosis(&tmp.graph).into()
+        },
     }
 }

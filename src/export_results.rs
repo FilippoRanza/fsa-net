@@ -1,5 +1,5 @@
 use crate::compiler::{NetNames, NetworkIndexTable};
-use crate::engine::{FullSpaceResult, LinSpaceResult, NetworkResult};
+use crate::engine::{DiagnosisResult, FullSpaceResult, LinSpaceResult, NetworkResult};
 use crate::graph;
 use crate::network;
 use crate::utils::zip;
@@ -53,7 +53,44 @@ fn export_result<'a>(result: &'a NetworkResult, table: &'a NetworkIndexTable<'a>
     match result {
         NetworkResult::FullSpace(full_space) => export_full_space(&full_space, table).into(),
         NetworkResult::Linspace(lin_space) => export_lin_space(&lin_space, table).into(),
+        NetworkResult::Diagnosis(diagnosis) => export_diagnosis(diagnosis, table).into(),
     }
+}
+
+fn export_diagnosis<'a>(
+    diag: &DiagnosisResult,
+    table: &'a NetworkIndexTable<'a>,
+) -> ExportDiagnosis {
+    let mut optional = false;
+    let table = table.get_network_names();
+    let options: Vec<String> = diag
+        .matrix
+        .iter()
+        .filter(|row| {
+            if row.len() == 0 {
+                optional = true;
+                false
+            } else {
+                true
+            }
+        })
+        .map(|row| export_diagnosis_variant(row, table))
+        .collect();
+
+    let regex = options.join("|");
+    let regex = if optional {
+        format!("({})?", regex)
+    } else {
+        regex
+    };
+
+    ExportDiagnosis{ regex }
+}
+
+fn export_diagnosis_variant<'a>(row: &[usize], table: &'a NetNames<'a>) -> String {
+    row.iter()
+        .map(|e| table.get_rel_name(*e))
+        .fold(String::new(), |acc, curr| acc + curr)
 }
 
 fn export_full_space<'a>(
@@ -88,9 +125,15 @@ fn export_lin_space<'a>(
 }
 
 #[derive(Serialize)]
+struct ExportDiagnosis {
+    regex: String
+}
+
+#[derive(Serialize)]
 enum Export<'a> {
     FullSpace(ExportFullSpace<'a>),
     LinSpace(ExportLinSpace<'a>),
+    Diagnosis(ExportDiagnosis),
 }
 
 impl<'a> From<ExportFullSpace<'a>> for Export<'a> {
@@ -102,6 +145,12 @@ impl<'a> From<ExportFullSpace<'a>> for Export<'a> {
 impl<'a> From<ExportLinSpace<'a>> for Export<'a> {
     fn from(res: ExportLinSpace<'a>) -> Self {
         Self::LinSpace(res)
+    }
+}
+
+impl<'a> From<ExportDiagnosis> for Export<'a> {
+    fn from(res: ExportDiagnosis) -> Self {
+        Self::Diagnosis(res)
     }
 }
 

@@ -1,8 +1,10 @@
+mod diagnosis;
 mod engine_utils;
 mod full_space;
 mod linspace;
 mod run;
 
+pub use diagnosis::DiagnosisResult;
 pub use full_space::FullSpaceResult;
 pub use linspace::LinSpaceResult;
 pub use run::run;
@@ -14,6 +16,7 @@ use crate::timer;
 pub enum NetworkResult {
     FullSpace(full_space::FullSpaceResult),
     Linspace(linspace::LinSpaceResult),
+    Diagnosis(diagnosis::DiagnosisResult),
 }
 
 pub struct EngineConfig {

@@ -3,7 +3,7 @@
 
 
 network NetTest {
-    rel r1, r2, r3
+    obs r1, r2, r3
 
     automata A {
         begin s0

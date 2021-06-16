@@ -290,7 +290,7 @@ impl<'a> GlobalNameTable<'a> {
         for (net_name, req) in self.requests.iter() {
             let net_table = self.networks.get(net_name).unwrap();
             validate_labels(net_table, req.get_linspace_labels(), NameClass::ObsLabel)?;
-            validate_labels(net_table, req.get_diagnosis_labels(), NameClass::RelLabel)?;
+            validate_labels(net_table, req.get_diagnosis_labels(), NameClass::ObsLabel)?;
         }
         Ok(self)
     }

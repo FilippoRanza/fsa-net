@@ -161,8 +161,6 @@ pub enum NodeKind {
     Final,
 }
 
-
-
 fn prune_list<T>(adj: &AdjList<T>, kind_list: &[NodeKind]) -> Vec<usize> {
     let mut reach: Vec<bool> = kind_list
         .iter()
@@ -175,7 +173,7 @@ fn prune_list<T>(adj: &AdjList<T>, kind_list: &[NodeKind]) -> Vec<usize> {
 
     for node in 0..adj.len() {
         if !reach[node] {
-            make_prune_list(node, adj, &mut seen, &mut reach); 
+            make_prune_list(node, adj, &mut seen, &mut reach);
             for s in seen.iter_mut() {
                 *s = false;
             }
@@ -204,8 +202,8 @@ fn make_prune_list<T>(
         seen[curr] = true;
         let next = &adj[curr];
         let next = next
-        .iter()
-        .find(|curr| make_prune_list(curr.next, adj, seen, reach));
+            .iter()
+            .find(|curr| make_prune_list(curr.next, adj, seen, reach));
         let stat = next.is_some();
         reach[curr] = stat;
         stat
@@ -272,21 +270,8 @@ mod test {
         let mut builder = GraphBuilder::new();
 
         let node_type = [
-            true,
-            false,
-            false,
-            true,
-            false, 
-            true,
-            true,
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
-            false, 
-            false
+            true, false, false, true, false, true, true, false, false, false, false, false, false,
+            false, false,
         ];
         assert_eq!(node_type.len(), 15);
 
@@ -316,7 +301,7 @@ mod test {
             (11, 12),
             (12, 8),
             (11, 13),
-            (13, 14)
+            (13, 14),
         ];
 
         for (s, d) in &arcs {
@@ -326,8 +311,6 @@ mod test {
         let graph = builder.build_graph();
         let prune = prune_list(&graph.adjacent, &graph.nodes);
         assert_eq!(prune, vec![13, 14], "{:?}", prune);
-    
-
     }
 
     #[test]

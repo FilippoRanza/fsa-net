@@ -301,7 +301,7 @@ mod test {
         match err {
             NameError::UndefinedLabel(err) => {
                 assert_eq!(err.name, "r4");
-                assert_eq!(err.class, NameClass::RelLabel);
+                assert_eq!(err.class, NameClass::ObsLabel);
             }
             _ => panic!("Expected Undefined Label, found {:?}", err),
         }
