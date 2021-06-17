@@ -273,6 +273,14 @@ impl Link {
     }
 }
 
+pub fn trans_event_to_rel_label(te: &TransEvent) -> Option<usize> {
+    if let Some(rel) = te.rel {
+        Some(rel)
+    } else {
+        None
+    }
+}
+
 #[cfg(test)]
 mod test {
 

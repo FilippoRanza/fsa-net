@@ -49,22 +49,22 @@ impl<'a, T> Graph<T> {
         (Self { adjacent, nodes }, states)
     }
 
-    pub fn convert<F, K>(self, f: F) -> Graph<K>
+    pub fn convert<F, K>(&self, f: F) -> Graph<K>
     where
-        F: Fn(T) -> K,
+        F: Fn(&T) -> K,
         K: Serialize + Deserialize<'a>,
     {
         let adj = self
             .adjacent
-            .into_iter()
+            .iter()
             .map(|vec| {
-                vec.into_iter()
-                    .map(|a| Arc::new(a.next, f(a.label)))
+                vec.iter()
+                    .map(|a| Arc::new(a.next, f(&a.label)))
                     .collect()
             })
             .collect();
         Graph {
-            nodes: self.nodes,
+            nodes: self.nodes.clone(),
             adjacent: adj,
         }
     }
@@ -74,11 +74,11 @@ impl<'a, T> Graph<T>
 where
     T: Serialize + Deserialize<'a>,
 {
-    fn save(self) -> String {
+    pub fn save(self) -> String {
         serde_json::to_string(&self).unwrap()
     }
 
-    fn load(s: &'a str) -> Self {
+    pub fn load(s: &'a str) -> Self {
         serde_json::from_str(s).unwrap()
     }
 }
@@ -189,7 +189,7 @@ impl<T> GraphBuilder<T> {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum NodeKind {
     Simple,
     Final,

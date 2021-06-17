@@ -30,6 +30,7 @@ impl<'a> RequestTable<'a> {
     pub fn add_request(&mut self, req: Request<'a>) {
         match req.1 {
             RequestType::Diagnosis(DiagnosisRequest::Load(file)) => self.insert_file(file),
+            RequestType::Linspace((_, Some(file))) => self.insert_file(file),
             _ => {}
         };
         self.requests.push(req)

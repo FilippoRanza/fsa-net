@@ -109,6 +109,12 @@ impl AsLabel for TransEvent {
     }
 }
 
+impl AsLabel for Option<usize> {
+    fn get_label(&self) -> Option<usize> {
+        *self
+    }
+}
+
 #[cfg(test)]
 mod test {
 
@@ -154,9 +160,5 @@ mod test {
         assert_eq!(expected, mat);
     }
 
-    impl AsLabel for Option<usize> {
-        fn get_label(&self) -> Option<usize> {
-            *self
-        }
-    }
+
 }

@@ -5,6 +5,10 @@ use super::diagnosis;
 use super::full_space;
 use super::linspace;
 use super::NetworkResult;
+use crate::input_output::{load_str_from_file, save_str_to_file};
+
+
+use crate::graph;
 
 pub fn run(
     net: &network::Network,
@@ -27,11 +31,22 @@ fn run_request(
 ) -> NetworkResult {
     match req {
         command::Command::FullSpace => full_space::compute_full_space(net, conf).into(),
-        command::Command::Linspace((obs_labels, _)) => {
-            linspace::compute_linear_space(net, obs_labels, conf).into()
-        }
+        command::Command::Linspace((obs_labels, out_file)) => run_linspace(net, obs_labels, out_file, file_names, conf),
         command::Command::Diagnosis(cmd) => run_diagnosis(net, conf, cmd, file_names),
     }
+}
+
+fn run_linspace(net: &network::Network, labels: &Vec<usize>, out_file: &Option<usize>, file_names: &Vec<&str>, conf: &super::EngineConfig) -> NetworkResult {
+    let lin_space = linspace::compute_linear_space(net, labels, conf);
+    if let Some(file_index) = out_file {
+        let file_name = file_names[*file_index];
+        let graph = &lin_space.graph;
+        let graph = graph.convert(network::trans_event_to_rel_label);
+        let json = graph.save();    
+        save_str_to_file(&json, file_name).unwrap();
+    }
+
+    lin_space.into()
 }
 
 fn run_diagnosis(
@@ -42,7 +57,7 @@ fn run_diagnosis(
 ) -> NetworkResult {
     match cmd {
         command::DiagnosisCommand::Fresh(obs_labels) => run_fresh_diagnosis(net, conf, obs_labels),
-        command::DiagnosisCommand::Load(file) => unimplemented!(),
+        command::DiagnosisCommand::Load(file) => run_load_diagnosis(*file, file_names, conf),
     }
 }
 
@@ -58,4 +73,11 @@ fn run_fresh_diagnosis(
         diagnosis::fail_diagnosis()
     }
     .into()
+}
+
+fn run_load_diagnosis(out_file: usize, file_names: &Vec<&str>, conf: &super::EngineConfig) -> NetworkResult {
+    let file_name = file_names[out_file];
+    let data = load_str_from_file(file_name).unwrap();
+    let g: graph::Graph<Option<usize>> = graph::Graph::load(&data);
+    diagnosis::diagnosis(&g, conf).into()
 }
