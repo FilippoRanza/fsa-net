@@ -57,11 +57,7 @@ impl<'a, T> Graph<T> {
         let adj = self
             .adjacent
             .iter()
-            .map(|vec| {
-                vec.iter()
-                    .map(|a| Arc::new(a.next, f(&a.label)))
-                    .collect()
-            })
+            .map(|vec| vec.iter().map(|a| Arc::new(a.next, f(&a.label))).collect())
             .collect();
         Graph {
             nodes: self.nodes.clone(),
@@ -78,8 +74,8 @@ where
         serde_json::to_string(&self).unwrap()
     }
 
-    pub fn load(s: &'a str) -> Self {
-        serde_json::from_str(s).unwrap()
+    pub fn load(s: &'a str) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(s)
     }
 }
 

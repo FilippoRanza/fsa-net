@@ -5,6 +5,8 @@ use crate::network;
 use crate::utils::zip;
 use serde::Serialize;
 
+type NRes = Result<NetworkResult, Box<dyn std::error::Error>>;
+
 pub enum JsonFormat {
     Compact,
     Pretty,
@@ -21,7 +23,7 @@ impl JsonFormat {
 }
 
 pub fn export_results(
-    results: Vec<NetworkResult>,
+    results: Vec<NRes>,
     index_table: &NetworkIndexTable,
     fmt: &JsonFormat,
 ) -> String {
@@ -30,16 +32,16 @@ pub fn export_results(
         .map(|results| export_result(results, index_table))
         .collect();
     let name = index_table.get_name();
-    ExportResult { name, exports }.to_json(fmt)
+    FullResult { name, exports }.to_json(fmt)
 }
 
 #[derive(Serialize)]
-pub struct ExportResult<'a> {
+pub struct FullResult<'a> {
     name: &'a str,
-    exports: Vec<Export<'a>>,
+    exports: Vec<ExportResult<'a>>,
 }
 
-impl<'a> ExportResult<'a> {
+impl<'a> FullResult<'a> {
     fn to_json(&self, fmt: &JsonFormat) -> String {
         let f = match fmt {
             JsonFormat::Compact => serde_json::to_string,
@@ -49,11 +51,21 @@ impl<'a> ExportResult<'a> {
     }
 }
 
-fn export_result<'a>(result: &'a NetworkResult, table: &'a NetworkIndexTable<'a>) -> Export<'a> {
+fn export_result<'a>(result: &'a NRes, table: &'a NetworkIndexTable<'a>) -> ExportResult<'a> {
     match result {
-        NetworkResult::FullSpace(full_space) => export_full_space(&full_space, table).into(),
-        NetworkResult::Linspace(lin_space) => export_lin_space(&lin_space, table).into(),
-        NetworkResult::Diagnosis(diagnosis) => export_diagnosis(diagnosis, table).into(),
+        Ok(result) => {
+            ExportResult::Success(
+                match result {
+                    NetworkResult::FullSpace(full_space) => export_full_space(&full_space, table).into(),
+                    NetworkResult::Linspace(lin_space) => export_lin_space(&lin_space, table).into(),
+                    NetworkResult::Diagnosis(diagnosis) => export_diagnosis(diagnosis, table).into(),
+                }
+            )
+        }
+        Err(err) => {
+            let msg = format!("{}", err);
+            ExportResult::Error(msg)
+        }
     }
 }
 
@@ -133,6 +145,12 @@ fn export_lin_space<'a>(
 #[derive(Serialize)]
 struct ExportDiagnosis {
     regex: Option<String>,
+}
+
+#[derive(Serialize)]
+enum ExportResult<'a> {
+    Success(Export<'a>),
+    Error(String)
 }
 
 #[derive(Serialize)]

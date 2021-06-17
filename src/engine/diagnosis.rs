@@ -159,6 +159,4 @@ mod test {
         let expected = vec![vec![], vec![0], vec![0, 1], vec![0, 1, 0]];
         assert_eq!(expected, mat);
     }
-
-
 }

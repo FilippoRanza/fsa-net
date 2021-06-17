@@ -7,15 +7,16 @@ use super::linspace;
 use super::NetworkResult;
 use crate::input_output::{load_str_from_file, save_str_to_file};
 
-
 use crate::graph;
+
+type NRes = Result<NetworkResult, Box<dyn std::error::Error>>;
 
 pub fn run(
     net: &network::Network,
     reqs: &command::Requests,
     conf: &super::EngineConfig,
-    file_names: &Vec<&str>
-) -> Vec<NetworkResult> {
+    file_names: &Vec<&str>,
+) -> Vec<NRes> {
     reqs.commands
         .iter()
         .map(|req| run_request(net, req, conf, file_names))
@@ -26,35 +27,42 @@ fn run_request(
     net: &network::Network,
     req: &command::Command,
     conf: &super::EngineConfig,
-    file_names: &Vec<&str>
-
-) -> NetworkResult {
+    file_names: &Vec<&str>,
+) -> NRes {
     match req {
-        command::Command::FullSpace => full_space::compute_full_space(net, conf).into(),
-        command::Command::Linspace((obs_labels, out_file)) => run_linspace(net, obs_labels, out_file, file_names, conf),
+        command::Command::FullSpace => Ok(full_space::compute_full_space(net, conf).into()),
+        command::Command::Linspace((obs_labels, out_file)) => {
+            run_linspace(net, obs_labels, out_file, file_names, conf)
+        }
         command::Command::Diagnosis(cmd) => run_diagnosis(net, conf, cmd, file_names),
     }
 }
 
-fn run_linspace(net: &network::Network, labels: &Vec<usize>, out_file: &Option<usize>, file_names: &Vec<&str>, conf: &super::EngineConfig) -> NetworkResult {
+fn run_linspace(
+    net: &network::Network,
+    labels: &Vec<usize>,
+    out_file: &Option<usize>,
+    file_names: &Vec<&str>,
+    conf: &super::EngineConfig,
+) -> NRes {
     let lin_space = linspace::compute_linear_space(net, labels, conf);
     if let Some(file_index) = out_file {
         let file_name = file_names[*file_index];
         let graph = &lin_space.graph;
         let graph = graph.convert(network::trans_event_to_rel_label);
-        let json = graph.save();    
-        save_str_to_file(&json, file_name).unwrap();
+        let json = graph.save();
+        save_str_to_file(&json, file_name)?;
     }
 
-    lin_space.into()
+    Ok(lin_space.into())
 }
 
 fn run_diagnosis(
     net: &network::Network,
     conf: &super::EngineConfig,
     cmd: &command::DiagnosisCommand,
-    file_names: &Vec<&str>
-) -> NetworkResult {
+    file_names: &Vec<&str>,
+) -> NRes {
     match cmd {
         command::DiagnosisCommand::Fresh(obs_labels) => run_fresh_diagnosis(net, conf, obs_labels),
         command::DiagnosisCommand::Load(file) => run_load_diagnosis(*file, file_names, conf),
@@ -65,19 +73,24 @@ fn run_fresh_diagnosis(
     net: &network::Network,
     conf: &super::EngineConfig,
     obs_labels: &Vec<usize>,
-) -> NetworkResult {
+) -> NRes {
     let tmp = linspace::compute_linear_space(net, obs_labels, conf);
-    if tmp.complete {
+    let output = if tmp.complete {
         diagnosis::diagnosis(&tmp.graph, conf)
     } else {
         diagnosis::fail_diagnosis()
     }
-    .into()
+    .into();
+    Ok(output)
 }
 
-fn run_load_diagnosis(out_file: usize, file_names: &Vec<&str>, conf: &super::EngineConfig) -> NetworkResult {
+fn run_load_diagnosis(
+    out_file: usize,
+    file_names: &Vec<&str>,
+    conf: &super::EngineConfig,
+) -> NRes {
     let file_name = file_names[out_file];
-    let data = load_str_from_file(file_name).unwrap();
-    let g: graph::Graph<Option<usize>> = graph::Graph::load(&data);
-    diagnosis::diagnosis(&g, conf).into()
+    let data = load_str_from_file(file_name)?;
+    let g: graph::Graph<Option<usize>> = graph::Graph::load(&data)?;
+    Ok(diagnosis::diagnosis(&g, conf).into())
 }
