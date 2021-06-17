@@ -12,6 +12,12 @@ impl Requests {
 #[derive(Debug)]
 pub enum Command {
     FullSpace,
-    Linspace(Vec<usize>),
-    Diagnosis(Vec<usize>),
+    Linspace((Vec<usize>, Option<usize>)),
+    Diagnosis(DiagnosisCommand),
+}
+
+#[derive(Debug)]
+pub enum DiagnosisCommand {
+    Fresh(Vec<usize>),
+    Load(usize),
 }

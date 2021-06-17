@@ -30,6 +30,7 @@ use super::Loc;
 pub struct GlobalNameTable<'a> {
     networks: HashMap<&'a str, NetworkNameTable<'a>>,
     requests: HashMap<&'a str, RequestTable<'a>>,
+
     status: CollectionStatus<'a>,
     net_index: usize,
 }
@@ -237,6 +238,11 @@ impl<'a> GlobalNameTable<'a> {
             let automata = net_table.automata.get(item_name).unwrap();
             automata.index
         }
+    }
+
+    pub fn get_file_index(&self, net_name: &str, name: &str) -> usize {
+        let req_table = self.requests.get(net_name).unwrap();
+        req_table.get_file_index(name)
     }
 
     pub fn get_automata_name_index(

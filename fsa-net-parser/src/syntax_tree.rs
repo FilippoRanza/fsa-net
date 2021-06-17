@@ -255,10 +255,22 @@ pub enum Command<'a> {
 #[derive(DefaultBuilder)]
 pub struct LinspaceCommand<'a> {
     pub name_list: Vec<&'a str>,
+    pub save_file: Option<&'a str>
 }
+
+pub enum DiagnosisCommand<'a> {
+    Fresh(FreshDiagnosisCommand<'a>),
+    Load(LoadDiagnosisCommand<'a>)
+}
+
 
 #[add_location]
 #[derive(DefaultBuilder)]
-pub struct DiagnosisCommand<'a> {
+pub struct FreshDiagnosisCommand<'a> {
     pub name_list: Vec<&'a str>,
+}
+#[add_location]
+#[derive(DefaultBuilder)]
+pub struct LoadDiagnosisCommand<'a> {
+    pub file: &'a str,
 }

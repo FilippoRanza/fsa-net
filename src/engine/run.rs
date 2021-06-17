@@ -24,17 +24,28 @@ fn run_request(
 ) -> NetworkResult {
     match req {
         command::Command::FullSpace => full_space::compute_full_space(net, conf).into(),
-        command::Command::Linspace(obs_labels) => {
+        command::Command::Linspace((obs_labels, _)) => {
             linspace::compute_linear_space(net, obs_labels, conf).into()
         }
-        command::Command::Diagnosis(obs_labels) => run_diagnosis(net, conf, obs_labels),
+        command::Command::Diagnosis(cmd) => run_diagnosis(net, conf, cmd),
     }
 }
 
 fn run_diagnosis(
     net: &network::Network,
     conf: &super::EngineConfig,
-    obs_labels: &[usize],
+    cmd: &command::DiagnosisCommand,
+) -> NetworkResult {
+    match cmd {
+        command::DiagnosisCommand::Fresh(obs_labels) => run_fresh_diagnosis(net, conf, obs_labels),
+        command::DiagnosisCommand::Load(file) => unimplemented!(),
+    }
+}
+
+fn run_fresh_diagnosis(
+    net: &network::Network,
+    conf: &super::EngineConfig,
+    obs_labels: &Vec<usize>,
 ) -> NetworkResult {
     let tmp = linspace::compute_linear_space(net, obs_labels, conf);
     if tmp.complete {

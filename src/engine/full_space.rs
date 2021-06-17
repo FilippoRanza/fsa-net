@@ -34,7 +34,6 @@ pub fn compute_full_space(net: &network::Network, conf: &EngineConfig) -> FullSp
         for (ev, next_state) in next_state.into_iter() {
             let next_index = get_next_index(next_state, &mut table, &mut stack);
             builder.add_arc(state_index, next_index, ev);
-            
         }
     }
     let (graph, states) = conf.mode.build_graph(builder, table);

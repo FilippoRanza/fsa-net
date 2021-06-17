@@ -160,10 +160,18 @@ RequestParamDecl: syntax_tree::CommandDecl<'input> = {
 
 RequestParam: syntax_tree::Command<'input> = {
     "space"  => syntax_tree::Command::Space,
-    <begin: @L> "linspace"  <list: NameList> <end: @R> => syntax_tree::Command::Linspace(syntax_tree::LinspaceCommand::new(list).set_location(begin, end)),
-    <begin: @L> "diagnosis"  <list: NameList> <end: @R> => syntax_tree::Command::Diagnosis(syntax_tree::DiagnosisCommand::new(list).set_location(begin, end))
+    <begin: @L> "linspace"  <list: NameList> <file: SaveName?> <end: @R> => syntax_tree::Command::Linspace(syntax_tree::LinspaceCommand::new(list, file).set_location(begin, end)),
+    <diagnosis: Diagnosis> => syntax_tree::Command::Diagnosis(diagnosis)
 }
 
+Diagnosis: syntax_tree::DiagnosisCommand<'input> = {
+    <begin: @L> "diagnosis"  <list: NameList> <end: @R> => syntax_tree::DiagnosisCommand::Fresh(syntax_tree::FreshDiagnosisCommand::new(list).set_location(begin, end)),
+    <begin: @L> "diagnosis"  "load" <file: Name> <end: @R> => syntax_tree::DiagnosisCommand::Load(syntax_tree::LoadDiagnosisCommand::new(file).set_location(begin, end))
+}
+
+SaveName: &'input str = {
+    "save" <Name>
+}
 
 
 NameList: Vec<&'input str> = {
@@ -219,6 +227,8 @@ match {
     r"input" => "input",
     r"output" => "output",
     r"diagnosis" => "diagnosis",
+    r"save" => "save",
+    r"load" => "load"
 
 
 

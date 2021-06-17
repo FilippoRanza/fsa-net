@@ -19,7 +19,11 @@ where
     }
 }
 
-pub fn get_next_state<T>(stack: &mut VecDeque<T>, timer: &timer::Timer, flag: &mut bool) -> Option<T> {
+pub fn get_next_state<T>(
+    stack: &mut VecDeque<T>,
+    timer: &timer::Timer,
+    flag: &mut bool,
+) -> Option<T> {
     if timer.timeout() {
         *flag = true;
         None

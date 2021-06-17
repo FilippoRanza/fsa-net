@@ -1,8 +1,9 @@
 use crate::utils::{auto_sort, zeros};
+use serde::{Deserialize, Serialize};
 
 pub type AdjList<T> = Vec<Vec<Arc<T>>>;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Arc<T> {
     pub label: T,
     pub next: usize,
@@ -24,7 +25,7 @@ impl<T> Arc<T> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Graph<T> {
     nodes: Vec<NodeKind>,
     adjacent: AdjList<T>,
@@ -46,6 +47,39 @@ impl<'a, T> Graph<T> {
         let adjacent = filter_by_index(adjacent, &prune);
         let states = filter_by_index(states, &prune);
         (Self { adjacent, nodes }, states)
+    }
+
+    pub fn convert<F, K>(self, f: F) -> Graph<K>
+    where
+        F: Fn(T) -> K,
+        K: Serialize + Deserialize<'a>,
+    {
+        let adj = self
+            .adjacent
+            .into_iter()
+            .map(|vec| {
+                vec.into_iter()
+                    .map(|a| Arc::new(a.next, f(a.label)))
+                    .collect()
+            })
+            .collect();
+        Graph {
+            nodes: self.nodes,
+            adjacent: adj,
+        }
+    }
+}
+
+impl<'a, T> Graph<T>
+where
+    T: Serialize + Deserialize<'a>,
+{
+    fn save(self) -> String {
+        serde_json::to_string(&self).unwrap()
+    }
+
+    fn load(s: &'a str) -> Self {
+        serde_json::from_str(s).unwrap()
     }
 }
 
@@ -155,7 +189,7 @@ impl<T> GraphBuilder<T> {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum NodeKind {
     Simple,
     Final,
