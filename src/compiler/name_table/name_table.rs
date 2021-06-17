@@ -257,10 +257,18 @@ impl<'a> GlobalNameTable<'a> {
         item.index
     }
 
-    pub fn get_index_table(self) -> GlobalIndexTable<'a> {
+    pub fn get_index_table(mut self) -> GlobalIndexTable<'a> {
         let mut factory = GlobalIndexTableFactory::default();
         for (name, table) in self.networks.into_iter() {
             let (net_factory, index) = table.into_index_table(name);
+            let req_table = self.requests.remove(name);
+            let net_factory = if let Some(req_table) = req_table {
+                let mut net_factory = net_factory;
+                net_factory.add_files(req_table.get_files());
+                net_factory
+            } else {
+                net_factory
+            };
             factory.add_network(net_factory, index);
         }
         factory.build()

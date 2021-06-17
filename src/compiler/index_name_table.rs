@@ -15,6 +15,7 @@ impl<'a> GlobalIndexTable<'a> {
 pub struct NetworkIndexTable<'a> {
     name: &'a str,
     net_names: NetNames<'a>,
+    files: Vec<&'a str>,
     automata_names: Vec<AutomataNames<'a>>,
 }
 
@@ -29,6 +30,10 @@ impl<'a> NetworkIndexTable<'a> {
 
     pub fn get_automata_names(&self, index: usize) -> &AutomataNames<'a> {
         &self.automata_names[index]
+    }
+
+    pub fn get_files_names(&self) -> &Vec<&'a str> {
+        &self.files
     }
 }
 
@@ -128,6 +133,7 @@ impl<'a> GlobalIndexTableFactory<'a> {
 pub struct NetworkIndexTableFactory<'a> {
     name: &'a str,
     net_names: NetNamesFactory<'a>,
+    files: Vec<&'a str>,
     automata_names: Vec<(AutomataNamesFactory<'a>, usize)>,
 }
 
@@ -144,6 +150,15 @@ impl<'a> NetworkIndexTableFactory<'a> {
     add_net_name! {add_ev_name}
     add_net_name! {add_link_name}
 
+    pub fn add_files<I>(&mut self, file_iter: I)
+    where
+        I: IntoIterator<Item = &'a str>,
+    {
+        for f in file_iter.into_iter() {
+            self.files.push(f);
+        }
+    }
+
     pub fn add_automata(&mut self, factory: AutomataNamesFactory<'a>, index: usize) {
         self.automata_names.push((factory, index));
     }
@@ -152,6 +167,7 @@ impl<'a> NetworkIndexTableFactory<'a> {
         let automata_names = build! { self.automata_names };
         NetworkIndexTable {
             name: self.name,
+            files: self.files,
             net_names: self.net_names.build(),
             automata_names,
         }

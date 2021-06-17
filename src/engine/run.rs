@@ -10,10 +10,11 @@ pub fn run(
     net: &network::Network,
     reqs: &command::Requests,
     conf: &super::EngineConfig,
+    file_names: &Vec<&str>
 ) -> Vec<NetworkResult> {
     reqs.commands
         .iter()
-        .map(|req| run_request(net, req, conf))
+        .map(|req| run_request(net, req, conf, file_names))
         .collect()
 }
 
@@ -21,13 +22,15 @@ fn run_request(
     net: &network::Network,
     req: &command::Command,
     conf: &super::EngineConfig,
+    file_names: &Vec<&str>
+
 ) -> NetworkResult {
     match req {
         command::Command::FullSpace => full_space::compute_full_space(net, conf).into(),
         command::Command::Linspace((obs_labels, _)) => {
             linspace::compute_linear_space(net, obs_labels, conf).into()
         }
-        command::Command::Diagnosis(cmd) => run_diagnosis(net, conf, cmd),
+        command::Command::Diagnosis(cmd) => run_diagnosis(net, conf, cmd, file_names),
     }
 }
 
@@ -35,6 +38,7 @@ fn run_diagnosis(
     net: &network::Network,
     conf: &super::EngineConfig,
     cmd: &command::DiagnosisCommand,
+    file_names: &Vec<&str>
 ) -> NetworkResult {
     match cmd {
         command::DiagnosisCommand::Fresh(obs_labels) => run_fresh_diagnosis(net, conf, obs_labels),

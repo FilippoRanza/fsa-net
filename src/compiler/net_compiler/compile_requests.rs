@@ -55,14 +55,6 @@ fn compile_diagnosis(
     }
 }
 
-fn compile_fresh_diagnosis(
-    label: &syntax_tree::DiagnosisCommand,
-    req_name: &str,
-    table: &GlobalNameTable,
-) -> Vec<usize> {
-    map_obs_label(&vec![""], req_name, table)
-}
-
 fn map_obs_label(labels: &[&str], req_name: &str, table: &GlobalNameTable) -> Vec<usize> {
     labels
         .iter()

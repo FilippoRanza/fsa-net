@@ -36,8 +36,10 @@ impl<'a> RequestTable<'a> {
     }
 
     fn insert_file(&mut self, name: &'a str) {
-        let index = self.files.len();
-        self.files.insert(name, index);
+        if !self.files.contains_key(name) {
+            let index = self.files.len();
+            self.files.insert(name, index);
+        }
     }
 
     pub fn get_linspace_labels(&self) -> impl Iterator<Item = &Vec<&'a str>> {
@@ -68,6 +70,10 @@ impl<'a> RequestTable<'a> {
 
     pub fn get_file_index(&self, file: &str) -> usize {
         *self.files.get(file).unwrap()
+    }
+
+    pub fn get_files(self) -> impl Iterator<Item = &'a str> {
+        self.files.into_iter().map(|(k, _)| k)
     }
 }
 
@@ -112,4 +118,31 @@ pub enum RequestType<'a> {
 pub enum DiagnosisRequest<'a> {
     Fresh(Vec<&'a str>),
     Load(&'a str),
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+
+    #[test]
+    fn test_add_files() {
+        let mut req_table = RequestTable::new((0, 0));
+
+        let names = ["file_a", "file_b", "file_c", "file_b", "file_a"];
+
+        for name in &names {
+            let req = ((0, 1), RequestType::Diagnosis(DiagnosisRequest::Load(name)));
+            req_table.add_request(req)
+        }
+
+        let result = [("file_a", 0), ("file_b", 1), ("file_c", 2)];
+
+        let files_index = req_table.files;
+        assert_eq!(files_index.len(), 3);
+        for (name, index) in &result {
+            let i = files_index.get(name).unwrap();
+            assert_eq!(i, index);
+        }
+    }
 }

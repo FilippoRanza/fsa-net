@@ -34,8 +34,8 @@ fn run_request(comp_res: compiler::CompileResult, conf: EngineConfig) {
     let timer_factory = timer::TimerFactory::from_value(conf.time_limit);
     let engine_config = engine::EngineConfig::new(conf.prune, timer_factory);
     for (i, cmd) in comp_res.compile_network.iter().enumerate() {
-        let res = engine::run(&cmd.net, &cmd.req, &engine_config);
         let net_table = comp_res.index_table.get_network_table(i);
+        let res = engine::run(&cmd.net, &cmd.req, &engine_config, net_table.get_files_names());
         let res = export_results::export_results(res, net_table, &conf.format);
         println!("{}", res);
     }
