@@ -22,13 +22,15 @@ pub enum NetworkResult {
 pub struct EngineConfig {
     mode: GraphMode,
     timer_factory: timer::TimerFactory,
+    deduplicate: bool
 }
 
 impl EngineConfig {
-    pub fn new(mode: GraphMode, timer: timer::TimerFactory) -> Self {
+    pub fn new(mode: GraphMode, timer: timer::TimerFactory, deduplicate: bool) -> Self {
         Self {
             mode,
             timer_factory: timer,
+            deduplicate
         }
     }
 }

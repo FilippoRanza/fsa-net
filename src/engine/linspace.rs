@@ -86,7 +86,7 @@ mod test {
         let net = &comp_res.compile_network[0].net;
 
         let obs_labels = [1, 0];
-        let config = EngineConfig::new(GraphMode::Full, timer::TimerFactory::from_value(None));
+        let config = EngineConfig::new(GraphMode::Full, timer::TimerFactory::from_value(None), false);
 
         let linspace = compute_linear_space(&net, &obs_labels, &config);
         let graph = &linspace.graph;

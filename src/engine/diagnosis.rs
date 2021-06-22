@@ -41,8 +41,13 @@ where
         &timer,
     );
 
-    let matrix: HashSet<Vec<usize>> = matrix.into_iter().collect();  
-    let matrix: Vec<Vec<usize>> = matrix.into_iter().collect();
+    let matrix = if conf.deduplicate {
+        let matrix: HashSet<Vec<usize>> = matrix.into_iter().collect();  
+        matrix.into_iter().collect()
+
+    } else {
+        matrix
+    };
 
     DiagnosisResult {
         matrix: Some(matrix),
@@ -154,7 +159,7 @@ mod test {
         }
 
         let graph = builder.build_graph();
-        let config = EngineConfig::new(GraphMode::Full, timer::TimerFactory::from_value(None));
+        let config = EngineConfig::new(GraphMode::Full, timer::TimerFactory::from_value(None), false);
         let mat = diagnosis(&graph, &config).matrix.unwrap();
         assert_eq!(mat.len(), 4);
         let mut mat = mat;
