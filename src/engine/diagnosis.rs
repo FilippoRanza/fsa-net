@@ -2,6 +2,7 @@ use super::EngineConfig;
 use crate::graph;
 use crate::network::TransEvent;
 use crate::timer::Timer;
+use std::collections::HashSet;
 
 type Stack = Vec<usize>;
 pub type Matrix = Vec<Vec<usize>>;
@@ -39,6 +40,9 @@ where
         &mut matrix,
         &timer,
     );
+
+    let matrix: HashSet<Vec<usize>> = matrix.into_iter().collect();  
+    let matrix: Vec<Vec<usize>> = matrix.into_iter().collect();
 
     DiagnosisResult {
         matrix: Some(matrix),
