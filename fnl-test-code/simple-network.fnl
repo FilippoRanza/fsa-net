@@ -55,6 +55,6 @@ network TestNetwork {
 }
 
 request TestNetwork {
-
-    diagnosis load "test.json"
+    linspace o3, o2
+    diagnosis o3, o2
 }

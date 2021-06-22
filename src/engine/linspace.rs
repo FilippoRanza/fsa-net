@@ -2,7 +2,7 @@ use crate::graph;
 use crate::network;
 use crate::state_table;
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
 
 use super::engine_utils::{get_next_index, get_next_state};
 use super::EngineConfig;
@@ -21,35 +21,32 @@ pub fn compute_linear_space(
     let mut builder = graph::GraphBuilder::new();
     let mut table = state_table::StateTable::new();
     let mut stack = VecDeque::new();
-    let mut label_table = IndexTable::new();
     let begin_state = net.get_initial_state();
     let begin_index = table.insert_state(begin_state);
-    label_table.insert_begin_state(begin_index);
     stack.push_front(begin_index);
     let mut timeout = false;
     let timer = conf.timer_factory.new_timer();
     while let Some(state_index) = get_next_state(&mut stack, &timer, &mut timeout) {
         let curr_state = table.get_object(state_index);
+        let obs_index = curr_state.get_index();
         if curr_state.is_final() && curr_state.get_index() == obs_labels.len() {
             builder.add_final_node(state_index);
         } else {
             builder.add_simple_node(state_index);
         }
         let next_state = net.step_one(curr_state);
-        for (event, next_state) in next_state.into_iter() {
-            let obs_index = label_table.get_index(state_index);
+        for (event, next_state) in next_state.into_iter() {    
             if let Some(obs) = event.obs {
                 if obs_index < obs_labels.len() && obs == obs_labels[obs_index] {
                     let next_state = next_state.set_index(obs_index + 1);
                     let next_index = get_next_index(next_state, &mut table, &mut stack);
-                    label_table.insert_next_index_state(state_index, next_index);
+                    
                     builder.add_arc(state_index, next_index, event);
                 }
             } else {
                 let next_state = next_state.set_index(obs_index);
                 let next_index = get_next_index(next_state, &mut table, &mut stack);
                 builder.add_arc(state_index, next_index, event);
-                label_table.copy_state_index(state_index, next_index);
             }
         }
     }
@@ -67,35 +64,6 @@ impl Into<super::NetworkResult> for LinSpaceResult {
     }
 }
 
-struct IndexTable {
-    table: HashMap<usize, usize>,
-}
-
-impl IndexTable {
-    fn new() -> Self {
-        Self {
-            table: HashMap::new(),
-        }
-    }
-
-    fn insert_begin_state(&mut self, state: usize) {
-        self.table.insert(state, 0);
-    }
-
-    fn insert_next_index_state(&mut self, prev: usize, state: usize) {
-        let index = self.get_index(prev);
-        self.table.insert(state, index + 1);
-    }
-
-    fn copy_state_index(&mut self, prev: usize, curr: usize) {
-        let index = self.get_index(prev);
-        self.table.insert(curr, index);
-    }
-
-    fn get_index(&self, state: usize) -> usize {
-        *self.table.get(&state).unwrap()
-    }
-}
 
 #[cfg(test)]
 mod test {
