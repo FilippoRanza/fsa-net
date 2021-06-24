@@ -32,6 +32,19 @@ pub struct Graph<T> {
 }
 
 impl<'a, T> Graph<T> {
+    pub fn take_label(mut self) -> Option<T> {
+        if self.adjacent.len() == 1 {
+            let mut vect = self.adjacent.pop().unwrap();
+            if vect.len() == 1 {
+                Some(vect.pop().unwrap().label)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
     pub fn get_adjacent_list(&'a self) -> &'a AdjList<T> {
         &self.adjacent
     }
@@ -42,17 +55,21 @@ impl<'a, T> Graph<T> {
 
     pub fn prune<K>(self, states: Vec<K>) -> (Self, Vec<K>) {
         let prune = prune_list(&self.adjacent, &self.nodes);
-        let nodes = filter_by_index(self.nodes, &prune);
-        let adjacent = remap_indexes(self.adjacent, &prune);
-        let adjacent = filter_by_index(adjacent, &prune);
+        let output_graph = self.prune_nodes(&prune);
         let states = filter_by_index(states, &prune);
-        (Self { adjacent, nodes }, states)
+        (output_graph, states)
+    }
+
+    pub fn prune_nodes(self, prune_list: &Vec<usize>) -> Self {
+        let nodes = filter_by_index(self.nodes, &prune_list);
+        let adjacent = remap_indexes(self.adjacent, &prune_list);
+        let adjacent = filter_by_index(adjacent, &prune_list);
+        Self { adjacent, nodes }
     }
 
     pub fn convert<F, K>(&self, f: F) -> Graph<K>
     where
         F: Fn(&T) -> K,
-        K: Serialize + Deserialize<'a>,
     {
         let adj = self
             .adjacent
@@ -63,6 +80,35 @@ impl<'a, T> Graph<T> {
             nodes: self.nodes.clone(),
             adjacent: adj,
         }
+    }
+}
+
+impl<T> Graph<T>
+where
+    T: Default,
+{
+    pub fn add_fake_nodes(self) -> Self {
+        let mut adjacent = Vec::with_capacity(self.adjacent.len() + 2);
+        adjacent.push(vec![Arc::new(1, T::default())]);
+        let final_node = self.adjacent.len() + 1;
+        for (i, adj) in self.adjacent.into_iter().enumerate() {
+            let mut adj = adj;
+            for n in adj.iter_mut() {
+                n.next += 1;
+            }
+            if let NodeKind::Final = self.nodes[i] {
+                let arc = Arc::new(final_node, T::default());
+                adj.push(arc);
+            }
+            adjacent.push(adj);
+        }
+        adjacent.push(vec![]);
+
+
+        let mut nodes: Vec<NodeKind> = (0..adjacent.len() - 1).map(|_| NodeKind::Simple).collect();
+        nodes.push(NodeKind::Final);
+
+        Self { adjacent, nodes }
     }
 }
 
@@ -476,4 +522,85 @@ mod test {
             self.next == *n
         }
     }
+
+    impl<T> PartialEq<Arc<T>> for Arc<T> {
+        fn eq(&self, n: &Arc<T>) -> bool {
+            self.next == n.next
+        }
+    }
+
+
+    #[test]
+    fn test_fake_nodes() {
+
+        let node_type = [
+            true, false, false, true, false, true 
+        ];
+        let mut builder = GraphBuilder::new();
+        for (i, nt) in enumerate! {node_type} {
+            if *nt {
+                builder.add_final_node(i);
+            } else {
+                builder.add_simple_node(i);
+            }
+        }
+
+        let arcs = [
+            (0, 1),
+            (0, 4),
+            (1, 2),
+            (2, 1),
+            (2, 3),
+            (4, 3),
+            (4, 5)
+        ];
+
+        for (s, d) in &arcs {
+            builder.add_arc(*s, *d, ());
+        }
+
+        let g =builder.build_graph();
+        let nodes = g.adjacent.len(); 
+        let g = g.add_fake_nodes();
+
+        assert_eq!(g.adjacent.len(), g.nodes.len());
+        assert_eq!(g.adjacent.len(), nodes + 2);
+
+        let node_type = [
+            false, false, false, false, false, false, false, true
+        ];
+        let mut builder = GraphBuilder::new();
+        for (i, nt) in enumerate! {node_type} {
+            if *nt {
+                builder.add_final_node(i);
+            } else {
+                builder.add_simple_node(i);
+            }
+        }
+
+        let arcs = [
+            (0, 1),
+            (1, 2),
+            (2, 3),
+            (3, 2),
+            (3, 4),
+            (1, 5),
+            (5, 4),
+            (5, 6),
+            (1, 7),
+            (6, 7),
+            (4, 7)
+        ];
+
+        for (s, d) in &arcs {
+            builder.add_arc(*s, *d, ());
+        }
+
+        let expected = builder.build_graph();
+
+        assert_eq!(expected.adjacent, g.adjacent);
+        assert_eq!(expected.nodes, g.nodes);
+
+    }
+
 }

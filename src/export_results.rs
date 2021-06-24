@@ -1,5 +1,5 @@
 use crate::compiler::{NetNames, NetworkIndexTable};
-use crate::engine::{DiagnosisResult, FullSpaceResult, LinSpaceResult, NetworkResult};
+use crate::engine::{DiagnosisResult, FullSpaceResult, LinSpaceResult, NetworkResult, Regex};
 use crate::graph;
 use crate::network;
 use crate::utils::zip;
@@ -53,15 +53,11 @@ impl<'a> FullResult<'a> {
 
 fn export_result<'a>(result: &'a NRes, table: &'a NetworkIndexTable<'a>) -> ExportResult<'a> {
     match result {
-        Ok(result) => {
-            ExportResult::Success(
-                match result {
-                    NetworkResult::FullSpace(full_space) => export_full_space(&full_space, table).into(),
-                    NetworkResult::Linspace(lin_space) => export_lin_space(&lin_space, table).into(),
-                    NetworkResult::Diagnosis(diagnosis) => export_diagnosis(diagnosis, table).into(),
-                }
-            )
-        }
+        Ok(result) => ExportResult::Success(match result {
+            NetworkResult::FullSpace(full_space) => export_full_space(&full_space, table).into(),
+            NetworkResult::Linspace(lin_space) => export_lin_space(&lin_space, table).into(),
+            NetworkResult::Diagnosis(diagnosis) => export_diagnosis(diagnosis, table).into(),
+        }),
         Err(err) => {
             let msg = format!("{}", err);
             ExportResult::Error(msg)
@@ -150,7 +146,7 @@ struct ExportDiagnosis {
 #[derive(Serialize)]
 enum ExportResult<'a> {
     Success(Export<'a>),
-    Error(String)
+    Error(String),
 }
 
 #[derive(Serialize)]
@@ -369,4 +365,27 @@ trait Convert<'a> {
         index: &'a NetworkIndexTable<'a>,
         kind: &graph::NodeKind,
     ) -> Self;
+}
+
+fn export_regex(regex: &Regex, table: &NetNames) -> String {
+    match regex {
+        Regex::Alternative(alt) => {
+            alt.iter()
+                .map(|a| export_regex(a, table))
+                .fold(String::new(), |acc, curr| {
+                    if acc.len() == 0 {
+                        acc + &curr
+                    } else {
+                        acc + "|" + &curr
+                    }
+                })
+        }
+        Regex::Optional(opt) => format!("({})?", export_regex(opt, table)),
+        Regex::Value(val) => join_values(val, table),
+        Regex::ZeroMore(rep) => format!("({})*", export_regex(rep, table)),
+    }
+}
+
+fn join_values(vals: &[usize], table: &NetNames) -> String {
+    vals.iter().map(|r| table.get_rel_name(*r)).collect()
 }

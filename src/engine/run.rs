@@ -84,11 +84,7 @@ fn run_fresh_diagnosis(
     Ok(output)
 }
 
-fn run_load_diagnosis(
-    out_file: usize,
-    file_names: &Vec<&str>,
-    conf: &super::EngineConfig,
-) -> NRes {
+fn run_load_diagnosis(out_file: usize, file_names: &Vec<&str>, conf: &super::EngineConfig) -> NRes {
     let file_name = file_names[out_file];
     let data = load_str_from_file(file_name)?;
     let g: graph::Graph<Option<usize>> = graph::Graph::load(&data)?;

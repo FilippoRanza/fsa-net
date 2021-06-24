@@ -28,8 +28,8 @@ struct EngineConfig {
     prune: engine::GraphMode,
     #[structopt(short="-t", long="--time-limit",parse(try_from_str = timer::parse_time_spec))]
     time_limit: Option<u64>,
-    #[structopt(short="-d", long="--deduplicate",parse(from_flag))]
-    deduplicate: bool
+    #[structopt(short = "-d", long = "--deduplicate", parse(from_flag))]
+    deduplicate: bool,
 }
 
 fn run_request(comp_res: compiler::CompileResult, conf: EngineConfig) {

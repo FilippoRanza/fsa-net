@@ -1,7 +1,9 @@
 use super::EngineConfig;
+use super::Regex;
 use crate::graph;
 use crate::network::TransEvent;
 use crate::timer::Timer;
+use crate::utils::zeros;
 use std::collections::HashSet;
 
 type Stack = Vec<usize>;
@@ -32,19 +34,20 @@ where
     let mut stack = Vec::with_capacity(node_count);
     let mut matrix = Vec::new();
     let timer = conf.timer_factory.new_timer();
+    let mut seen = zeros(node_count);
     run_diagnosis(
         0,
         g.get_adjacent_list(),
         g.get_node_kind_list(),
+        &mut seen,
         &mut stack,
         &mut matrix,
         &timer,
     );
 
     let matrix = if conf.deduplicate {
-        let matrix: HashSet<Vec<usize>> = matrix.into_iter().collect();  
+        let matrix: HashSet<Vec<usize>> = matrix.into_iter().collect();
         matrix.into_iter().collect()
-
     } else {
         matrix
     };
@@ -73,6 +76,7 @@ fn run_diagnosis<T>(
     curr: usize,
     adj: &graph::AdjList<T>,
     node_type: &[graph::NodeKind],
+    seen: &mut [bool],
     stack: &mut Stack,
     mat: &mut Matrix,
     timer: &Timer,
@@ -83,8 +87,12 @@ fn run_diagnosis<T>(
         let tmp = stack.clone();
         mat.push(tmp);
     }
-
     for next in &adj[curr] {
+        if seen[next.next] {
+            continue;
+        } else {
+            seen[next.next] = true;
+        }
         if timer.timeout() {
             break;
         }
@@ -94,7 +102,7 @@ fn run_diagnosis<T>(
             stack.push(rel);
         }
 
-        run_diagnosis(next.next, adj, node_type, stack, mat, timer);
+        run_diagnosis(next.next, adj, node_type, seen, stack, mat, timer);
 
         if rel.is_some() {
             stack.pop();
@@ -122,6 +130,37 @@ impl AsLabel for Option<usize> {
     fn get_label(&self) -> Option<usize> {
         *self
     }
+}
+
+fn convert_graph<T: AsLabel>(g: &graph::Graph<T>) -> graph::Graph<Regex> {
+    fn lbl_to_vect<T: AsLabel>(t: &T) -> Vec<usize> {
+        if let Some(lbl) = t.get_label() {
+            vec![lbl]
+        } else {
+            vec![]
+        }
+    }
+    g.convert(|lbl| Regex::Value(lbl_to_vect(lbl)))
+}
+
+fn build_regex<T: AsLabel>(g: &graph::Graph<T>) -> Regex {
+    let mut g = convert_graph(g);
+    while g.get_adjacent_list().len() > 1 {
+        if let Some(chain) = find_chain() {
+            g = g.prune_nodes(&chain);
+        } else if let Some(parallel) = find_parallel() {
+            g = g.prune_nodes(&parallel);
+        }
+    }
+    g.take_label().unwrap()
+}
+
+fn find_chain() -> Option<Vec<usize>> {
+    None
+}
+
+fn find_parallel() -> Option<Vec<usize>> {
+    None
 }
 
 #[cfg(test)]
@@ -159,7 +198,11 @@ mod test {
         }
 
         let graph = builder.build_graph();
-        let config = EngineConfig::new(GraphMode::Full, timer::TimerFactory::from_value(None), false);
+        let config = EngineConfig::new(
+            GraphMode::Full,
+            timer::TimerFactory::from_value(None),
+            false,
+        );
         let mat = diagnosis(&graph, &config).matrix.unwrap();
         assert_eq!(mat.len(), 4);
         let mut mat = mat;

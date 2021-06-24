@@ -69,7 +69,11 @@ mod test {
         let comp_res = compile(&code).expect("`simple-network` should be semantically correct");
         let net = &comp_res.compile_network[0].net;
 
-        let config = EngineConfig::new(GraphMode::Full, timer::TimerFactory::from_value(None), false);
+        let config = EngineConfig::new(
+            GraphMode::Full,
+            timer::TimerFactory::from_value(None),
+            false,
+        );
 
         let result = compute_full_space(&net, &config);
 

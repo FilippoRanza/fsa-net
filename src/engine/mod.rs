@@ -22,7 +22,7 @@ pub enum NetworkResult {
 pub struct EngineConfig {
     mode: GraphMode,
     timer_factory: timer::TimerFactory,
-    deduplicate: bool
+    deduplicate: bool,
 }
 
 impl EngineConfig {
@@ -30,7 +30,7 @@ impl EngineConfig {
         Self {
             mode,
             timer_factory: timer,
-            deduplicate
+            deduplicate,
         }
     }
 }
@@ -63,4 +63,11 @@ impl GraphMode {
             Self::Prune => builder.build_graph().prune(stat_list),
         }
     }
+}
+
+pub enum Regex {
+    Alternative(Vec<Regex>),
+    ZeroMore(Box<Regex>),
+    Optional(Box<Regex>),
+    Value(Vec<usize>),
 }

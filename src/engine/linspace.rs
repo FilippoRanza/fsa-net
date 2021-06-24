@@ -35,12 +35,12 @@ pub fn compute_linear_space(
             builder.add_simple_node(state_index);
         }
         let next_state = net.step_one(curr_state);
-        for (event, next_state) in next_state.into_iter() {    
+        for (event, next_state) in next_state.into_iter() {
             if let Some(obs) = event.obs {
                 if obs_index < obs_labels.len() && obs == obs_labels[obs_index] {
                     let next_state = next_state.set_index(obs_index + 1);
                     let next_index = get_next_index(next_state, &mut table, &mut stack);
-                    
+
                     builder.add_arc(state_index, next_index, event);
                 }
             } else {
@@ -64,7 +64,6 @@ impl Into<super::NetworkResult> for LinSpaceResult {
     }
 }
 
-
 #[cfg(test)]
 mod test {
 
@@ -86,7 +85,11 @@ mod test {
         let net = &comp_res.compile_network[0].net;
 
         let obs_labels = [1, 0];
-        let config = EngineConfig::new(GraphMode::Full, timer::TimerFactory::from_value(None), false);
+        let config = EngineConfig::new(
+            GraphMode::Full,
+            timer::TimerFactory::from_value(None),
+            false,
+        );
 
         let linspace = compute_linear_space(&net, &obs_labels, &config);
         let graph = &linspace.graph;
