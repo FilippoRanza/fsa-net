@@ -66,45 +66,12 @@ fn export_result<'a>(result: &'a NRes, table: &'a NetworkIndexTable<'a>) -> Expo
 }
 
 fn export_diagnosis(diag: &DiagnosisResult, table: &NetworkIndexTable) -> ExportDiagnosis {
-    if let Some(matrix) = &diag.matrix {
-        export_existing_diagnosis(&matrix, table)
+    if let Some(regex) = &diag.matrix {
+        let regex = export_regex(regex, table.get_network_names());
+        ExportDiagnosis { regex: Some(regex) }
     } else {
         ExportDiagnosis { regex: None }
     }
-}
-
-fn export_existing_diagnosis(
-    matrix: &Vec<Vec<usize>>,
-    table: &NetworkIndexTable,
-) -> ExportDiagnosis {
-    let mut optional = false;
-    let table = table.get_network_names();
-    let options: Vec<String> = matrix
-        .iter()
-        .filter(|row| {
-            if row.len() == 0 {
-                optional = true;
-                false
-            } else {
-                true
-            }
-        })
-        .map(|row| export_diagnosis_variant(row, table))
-        .collect();
-
-    let regex = options.join("|");
-    let regex = if optional {
-        format!("({})?", regex)
-    } else {
-        regex
-    };
-    ExportDiagnosis { regex: Some(regex) }
-}
-
-fn export_diagnosis_variant(row: &[usize], table: &NetNames) -> String {
-    row.iter()
-        .map(|e| table.get_rel_name(*e))
-        .fold(String::new(), |acc, curr| acc + curr)
 }
 
 fn export_full_space<'a>(
@@ -370,16 +337,19 @@ trait Convert<'a> {
 fn export_regex(regex: &Regex, table: &NetNames) -> String {
     match regex {
         Regex::Alternative(alt) => {
-            alt.iter()
-                .map(|a| export_regex(a, table))
-                .fold(String::new(), |acc, curr| {
-                    if acc.len() == 0 {
-                        acc + &curr
-                    } else {
-                        acc + "|" + &curr
-                    }
-                })
+            let alt =
+                alt.iter()
+                    .map(|a| export_regex(a, table))
+                    .fold(String::new(), |acc, curr| {
+                        if acc.len() == 0 {
+                            format!("({})", curr)
+                        } else {
+                            format!("{}|({})", acc, curr)
+                        }
+                    });
+            format!("({})", alt)
         }
+        Regex::Chain(chain) => chain.iter().map(|c| export_regex(c, table)).collect(),
         Regex::Optional(opt) => format!("({})?", export_regex(opt, table)),
         Regex::Value(val) => join_values(val, table),
         Regex::ZeroMore(rep) => format!("({})*", export_regex(rep, table)),

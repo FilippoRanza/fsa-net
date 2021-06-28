@@ -21,6 +21,13 @@ pub fn zip<'a, T, K>(
     list_a.iter().zip(list_b.iter())
 }
 
+pub fn clear<T: Default>(mut vec: Vec<T>) -> Vec<T> {
+    for i in vec.iter_mut() {
+        *i = T::default();
+    }
+    vec
+}
+
 #[macro_export]
 macro_rules! enumerate {
     ($iter: expr) => {

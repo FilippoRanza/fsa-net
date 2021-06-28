@@ -14,12 +14,13 @@ impl<T> Arc<T> {
         Self { next, label }
     }
 
-    fn remap(mut self, mapper: &[Option<usize>]) -> Option<Self> {
+    fn remap(mut self, mapper: &[Option<usize>], collect: &mut Vec<Arc<T>>) -> Option<Self> {
         let map = mapper[self.next];
         if let Some(next) = map {
             self.next = next;
             Some(self)
         } else {
+            collect.push(self);
             None
         }
     }
@@ -32,19 +33,6 @@ pub struct Graph<T> {
 }
 
 impl<'a, T> Graph<T> {
-    pub fn take_label(mut self) -> Option<T> {
-        if self.adjacent.len() == 1 {
-            let mut vect = self.adjacent.pop().unwrap();
-            if vect.len() == 1 {
-                Some(vect.pop().unwrap().label)
-            } else {
-                None
-            }
-        } else {
-            None
-        }
-    }
-
     pub fn get_adjacent_list(&'a self) -> &'a AdjList<T> {
         &self.adjacent
     }
@@ -55,16 +43,66 @@ impl<'a, T> Graph<T> {
 
     pub fn prune<K>(self, states: Vec<K>) -> (Self, Vec<K>) {
         let prune = prune_list(&self.adjacent, &self.nodes);
-        let output_graph = self.prune_nodes(&prune);
+        let output_graph = self.prune_nodes(&prune).0;
         let states = filter_by_index(states, &prune);
         (output_graph, states)
     }
 
-    pub fn prune_nodes(self, prune_list: &Vec<usize>) -> Self {
+    pub fn chain_transaction(&mut self, nodes: &[usize]) -> Vec<T> {
+        let mut output = Vec::with_capacity(nodes.len() - 1);
+        let src = nodes[0];
+        let dst = nodes[1];
+        let v = &mut self.adjacent[src];
+        let index = find_by_next(v, dst).unwrap();
+        let next = v.remove(index).label;
+        output.push(next);
+        for src in &nodes[1..nodes.len() - 1] {
+            let v = &mut self.adjacent[*src];
+            let next = v.pop().unwrap().label;
+            output.push(next);
+        }
+
+        output
+    }
+
+    pub fn remove_nodes(
+        self,
+        prune_list: &[usize],
+        src: usize,
+        dst: usize,
+    ) -> (Self, Vec<Arc<T>>, usize, usize) {
         let nodes = filter_by_index(self.nodes, &prune_list);
-        let adjacent = remap_indexes(self.adjacent, &prune_list);
+        let remapper = IndexRemap::new(self.adjacent.len(), prune_list);
+        let (adjacent, remove) = remapper.remap_indexes(self.adjacent);
         let adjacent = filter_by_index(adjacent, &prune_list);
-        Self { adjacent, nodes }
+        let src = remapper.remap_node(src).unwrap();
+        let dst = remapper.remap_node(dst).unwrap();
+
+        (Self { adjacent, nodes }, remove, src, dst)
+    }
+
+    pub fn prune_nodes(self, prune_list: &[usize]) -> (Self, Vec<Arc<T>>) {
+        let nodes = filter_by_index(self.nodes, &prune_list);
+        let remapper = IndexRemap::new(self.adjacent.len(), prune_list);
+        let (adjacent, remove) = remapper.remap_indexes(self.adjacent);
+        let adjacent = filter_by_index(adjacent, &prune_list);
+        (Self { adjacent, nodes }, remove)
+    }
+
+    pub fn add_arc(mut self, src: usize, dst: usize, value: T) -> Self {
+        let arc = Arc::new(dst, value);
+        self.adjacent[src].push(arc);
+        self
+    }
+
+    pub fn remove_arc(&mut self, src: usize, dst: usize) -> Vec<Arc<T>> {
+        let v = &mut self.adjacent[src];
+        let mut output = Vec::with_capacity(v.len());
+        while let Some(i) = find_by_next(&v, dst) {
+            let arc = v.remove(i);
+            output.push(arc);
+        }
+        output
     }
 
     pub fn convert<F, K>(&self, f: F) -> Graph<K>
@@ -80,6 +118,19 @@ impl<'a, T> Graph<T> {
             nodes: self.nodes.clone(),
             adjacent: adj,
         }
+    }
+
+    pub fn find_origin(&'a self, node: usize) -> impl Iterator<Item = usize> + 'a {
+        self.adjacent
+            .iter()
+            .enumerate()
+            .filter(move |(_, adj)| find_by_next(adj, node).is_some())
+            .map(|(i, _)| i)
+            .filter(move |i| *i != node)
+    }
+
+    pub fn trans_count(&self) -> usize {
+        self.adjacent.iter().map(|adj| adj.len()).sum()
     }
 }
 
@@ -104,11 +155,24 @@ where
         }
         adjacent.push(vec![]);
 
-
         let mut nodes: Vec<NodeKind> = (0..adjacent.len() - 1).map(|_| NodeKind::Simple).collect();
         nodes.push(NodeKind::Final);
 
         Self { adjacent, nodes }
+    }
+}
+
+impl<T> Graph<T>
+where
+    T: Clone,
+{
+    pub fn get_arc(&self, src: usize, dst: usize) -> T {
+        let v = &self.adjacent[src];
+        if let Some(i) = find_by_next(&v, dst) {
+            v[i].label.clone()
+        } else {
+            panic!()
+        }
     }
 }
 
@@ -125,15 +189,43 @@ where
     }
 }
 
-fn remap_indexes<T>(adj: AdjList<T>, prune: &[usize]) -> AdjList<T> {
-    let index_map = build_index_remap(adj.len(), prune);
-    adj.into_iter()
-        .map(|v| remap_adjacent(v, &index_map))
-        .collect()
+struct IndexRemap {
+    remap: Vec<Option<usize>>,
 }
 
-fn remap_adjacent<T>(iter: Vec<Arc<T>>, remap: &[Option<usize>]) -> Vec<Arc<T>> {
-    iter.into_iter().filter_map(|i| i.remap(remap)).collect()
+impl IndexRemap {
+    fn new(count: usize, prune: &[usize]) -> Self {
+        let remap = build_index_remap(count, prune);
+        Self { remap }
+    }
+
+    fn remap_indexes<T>(&self, adj: AdjList<T>) -> (AdjList<T>, Vec<Arc<T>>) {
+        let mut remove_arcs = Vec::new();
+        (
+            adj.into_iter()
+                .map(|v| {
+                    let (adj, mut remove) = remap_adjacent(v, &self.remap);
+                    remove_arcs.append(&mut remove);
+                    adj
+                })
+                .collect(),
+            remove_arcs,
+        )
+    }
+
+    fn remap_node(&self, node: usize) -> Option<usize> {
+        self.remap[node]
+    }
+}
+
+fn remap_adjacent<T>(iter: Vec<Arc<T>>, remap: &[Option<usize>]) -> (Vec<Arc<T>>, Vec<Arc<T>>) {
+    let mut vect = Vec::new();
+    (
+        iter.into_iter()
+            .filter_map(|i| i.remap(remap, &mut vect))
+            .collect(),
+        vect,
+    )
 }
 
 fn build_index_remap(len: usize, prune: &[usize]) -> Vec<Option<usize>> {
@@ -284,6 +376,13 @@ fn make_prune_list<T>(
         reach[curr] = stat;
         stat
     }
+}
+
+fn find_by_next<T>(v: &[Arc<T>], val: usize) -> Option<usize> {
+    v.into_iter()
+        .enumerate()
+        .find(|(_, n)| n.next == val)
+        .map(|(i, _)| i)
 }
 
 #[cfg(test)]
@@ -529,13 +628,9 @@ mod test {
         }
     }
 
-
     #[test]
     fn test_fake_nodes() {
-
-        let node_type = [
-            true, false, false, true, false, true 
-        ];
+        let node_type = [true, false, false, true, false, true];
         let mut builder = GraphBuilder::new();
         for (i, nt) in enumerate! {node_type} {
             if *nt {
@@ -545,30 +640,20 @@ mod test {
             }
         }
 
-        let arcs = [
-            (0, 1),
-            (0, 4),
-            (1, 2),
-            (2, 1),
-            (2, 3),
-            (4, 3),
-            (4, 5)
-        ];
+        let arcs = [(0, 1), (0, 4), (1, 2), (2, 1), (2, 3), (4, 3), (4, 5)];
 
         for (s, d) in &arcs {
             builder.add_arc(*s, *d, ());
         }
 
-        let g =builder.build_graph();
-        let nodes = g.adjacent.len(); 
+        let g = builder.build_graph();
+        let nodes = g.adjacent.len();
         let g = g.add_fake_nodes();
 
         assert_eq!(g.adjacent.len(), g.nodes.len());
         assert_eq!(g.adjacent.len(), nodes + 2);
 
-        let node_type = [
-            false, false, false, false, false, false, false, true
-        ];
+        let node_type = [false, false, false, false, false, false, false, true];
         let mut builder = GraphBuilder::new();
         for (i, nt) in enumerate! {node_type} {
             if *nt {
@@ -589,7 +674,7 @@ mod test {
             (5, 6),
             (1, 7),
             (6, 7),
-            (4, 7)
+            (4, 7),
         ];
 
         for (s, d) in &arcs {
@@ -600,7 +685,5 @@ mod test {
 
         assert_eq!(expected.adjacent, g.adjacent);
         assert_eq!(expected.nodes, g.nodes);
-
     }
-
 }

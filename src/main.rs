@@ -28,13 +28,11 @@ struct EngineConfig {
     prune: engine::GraphMode,
     #[structopt(short="-t", long="--time-limit",parse(try_from_str = timer::parse_time_spec))]
     time_limit: Option<u64>,
-    #[structopt(short = "-d", long = "--deduplicate", parse(from_flag))]
-    deduplicate: bool,
 }
 
 fn run_request(comp_res: compiler::CompileResult, conf: EngineConfig) {
     let timer_factory = timer::TimerFactory::from_value(conf.time_limit);
-    let engine_config = engine::EngineConfig::new(conf.prune, timer_factory, conf.deduplicate);
+    let engine_config = engine::EngineConfig::new(conf.prune, timer_factory);
     for (i, cmd) in comp_res.compile_network.iter().enumerate() {
         let net_table = comp_res.index_table.get_network_table(i);
         let res = engine::run(
