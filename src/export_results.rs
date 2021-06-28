@@ -68,9 +68,17 @@ fn export_result<'a>(result: &'a NRes, table: &'a NetworkIndexTable<'a>) -> Expo
 fn export_diagnosis(diag: &DiagnosisResult, table: &NetworkIndexTable) -> ExportDiagnosis {
     if let Some(regex) = &diag.matrix {
         let regex = export_regex(regex, table.get_network_names());
-        ExportDiagnosis { regex: Some(regex), complete: diag.complete, timeout: diag.timeout }
+        ExportDiagnosis {
+            regex: Some(regex),
+            complete: diag.complete,
+            timeout: diag.timeout,
+        }
     } else {
-        ExportDiagnosis { regex: None, complete: diag.complete,  timeout: diag.timeout  }
+        ExportDiagnosis {
+            regex: None,
+            complete: diag.complete,
+            timeout: diag.timeout,
+        }
     }
 }
 
@@ -109,7 +117,7 @@ fn export_lin_space<'a>(
 struct ExportDiagnosis {
     regex: Option<String>,
     complete: bool,
-    timeout: bool
+    timeout: bool,
 }
 
 #[derive(Serialize)]

@@ -32,20 +32,16 @@ where
     let regex = build_regex(g, conf);
 
     match regex {
-        BuildResult::Regex(regex) => {
-            DiagnosisResult {
-                matrix: regex,
-                complete: true,
-                timeout: false
-            }
+        BuildResult::Regex(regex) => DiagnosisResult {
+            matrix: regex,
+            complete: true,
+            timeout: false,
         },
-        BuildResult::Timeout => {
-            DiagnosisResult {
-                matrix: None,
-                complete: false,
-                timeout: true
-            }
-        }
+        BuildResult::Timeout => DiagnosisResult {
+            matrix: None,
+            complete: false,
+            timeout: true,
+        },
     }
 }
 
@@ -53,7 +49,7 @@ fn empty_diagnosis() -> DiagnosisResult {
     DiagnosisResult {
         matrix: Some(Regex::default()),
         complete: true,
-        timeout: false
+        timeout: false,
     }
 }
 
@@ -61,7 +57,7 @@ pub fn fail_diagnosis() -> DiagnosisResult {
     DiagnosisResult {
         matrix: None,
         complete: true,
-        timeout: false
+        timeout: false,
     }
 }
 
@@ -121,6 +117,7 @@ fn build_regex<T: AsLabel>(g: &graph::Graph<T>, conf: &EngineConfig) -> BuildRes
         BuildResult::Timeout
     } else {
         let output = g.remove_arc(0, 1).pop().unwrap().label;
+
         let regex = output.fix_empty();
         BuildResult::Regex(regex)
     }
@@ -128,7 +125,7 @@ fn build_regex<T: AsLabel>(g: &graph::Graph<T>, conf: &EngineConfig) -> BuildRes
 
 enum BuildResult {
     Timeout,
-    Regex(Option<Regex>)
+    Regex(Option<Regex>),
 }
 
 fn continue_process<T>(g: &graph::Graph<T>, timeout: &mut bool, timer: &Timer) -> bool {
@@ -142,8 +139,7 @@ fn continue_process<T>(g: &graph::Graph<T>, timeout: &mut bool, timer: &Timer) -
 
 fn process_best_node(mut g: graph::Graph<Regex>, count: &[TransCount]) -> graph::Graph<Regex> {
     let best = guess_best(&count);
-    dbg!(&best);
-    dbg!(&g);
+
     let adj = &g.get_adjacent_list()[best];
     let best_count = &count[best];
     let mut actions = Vec::with_capacity(best_count.incoming + best_count.outcoming);
@@ -155,7 +151,6 @@ fn process_best_node(mut g: graph::Graph<Regex>, count: &[TransCount]) -> graph:
     }
 
     let auto_loop = find_auto_trans(&mut g, best);
-    dbg!(&actions);
 
     for (src, dst) in actions {
         let v1 = g.get_arc(src, best);
@@ -172,7 +167,6 @@ fn process_best_node(mut g: graph::Graph<Regex>, count: &[TransCount]) -> graph:
     }
 
     let (g, _) = g.prune_nodes(&[best]);
-    dbg!(&g);
     g
 }
 
@@ -197,14 +191,13 @@ fn guess_best(trans_count: &[TransCount]) -> usize {
     index + 1
 }
 
-fn apply_chain(chain: Vec<usize>, mut g: graph::Graph<Regex>) -> graph::Graph<Regex> {
+fn apply_chain(mut chain: Vec<usize>, mut g: graph::Graph<Regex>) -> graph::Graph<Regex> {
     let first = *chain.first().unwrap();
     let last = *chain.last().unwrap();
-
     let rm = g.chain_transaction(&chain);
-    let mut chain = chain;
-    chain.sort_unstable();
-    let ch = &chain[1..chain.len() - 1];
+    let last_index = chain.len() - 1;
+    let ch = &mut chain[1..last_index];
+    ch.sort_unstable();
     let (g, _, first, last) = g.remove_nodes(ch, first, last);
     let regex = Regex::Chain(rm);
     g.add_arc(first, last, regex)
@@ -239,7 +232,6 @@ struct TransCount {
     incoming: usize,
     outcoming: usize,
 }
-
 
 fn find_chain<T>(g: &graph::AdjList<T>, count: &[TransCount]) -> Option<Vec<usize>> {
     let candidate = count
@@ -381,46 +373,20 @@ mod test {
         }
 
         let graph = builder.build_graph();
-        let config = EngineConfig::new(
-            GraphMode::Full,
-            timer::TimerFactory::from_value(None),
-        );
+        let config = EngineConfig::new(GraphMode::Full, timer::TimerFactory::from_value(None));
         let regex = diagnosis(&graph, &config).matrix.unwrap();
-        let expected = Regex::Chain(
-            vec![
-                Regex::Optional(
-                    Box::new(
-                        Regex::Chain(
-                            vec![
-                                Regex::Chain(vec![Regex::Value(vec![0]),
-                                Regex::Optional(
-                                    Box::new(Regex::Chain(
-                                        vec![Regex::Chain(
-                                            vec![
-                                                Regex::Value(vec![1]), 
-                                                Regex::Optional(
-                                                    Box::new(Regex::Chain(
-                                                        vec![
-                                                            Regex::Chain(
-                                                                vec![
-                                                                    Regex::Value(vec![0])
-                                                                    ])
-                                                            ]
-                                                    ))
-                                                )
-                                                ]
-                                        )
-                                        ]
-                                    ))
-                                )
-                                ]
-                            )
-                            ]
-                        )
-                    )
-                )]);
-                    
-        
+        let expected = Regex::Chain(vec![Regex::Optional(Box::new(Regex::Chain(vec![
+            Regex::Chain(vec![
+                Regex::Value(vec![0]),
+                Regex::Optional(Box::new(Regex::Chain(vec![Regex::Chain(vec![
+                    Regex::Value(vec![1]),
+                    Regex::Optional(Box::new(Regex::Chain(vec![Regex::Chain(vec![
+                        Regex::Value(vec![0]),
+                    ])]))),
+                ])]))),
+            ]),
+        ])))]);
+
         assert_eq!(expected, regex);
     }
 
@@ -506,5 +472,4 @@ mod test {
             }
         }
     }
-    
 }

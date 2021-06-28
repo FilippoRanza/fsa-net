@@ -91,7 +91,6 @@ impl Regex {
     }
 
     fn fix_empty(self) -> Option<Self> {
-        dbg!(&self);
         let out = match self {
             Self::Alternative(alt) => {
                 let len = alt.len();
@@ -107,9 +106,9 @@ impl Regex {
                     }
                     _ => {
                         if len != alt.len() {
-                            Some(Self::Optional(Box::new(Self::Chain(alt))))
+                            Some(Self::Optional(Box::new(Self::Alternative(alt))))
                         } else {
-                            Some(Self::Chain(alt))
+                            Some(Self::Alternative(alt))
                         }
                     }
                 }
@@ -154,7 +153,6 @@ impl Regex {
                 }
             }
         };
-        dbg!(&out);
         out
     }
 }
