@@ -10,6 +10,7 @@ use std::collections::HashSet;
 pub struct DiagnosisResult {
     pub matrix: Option<Regex>,
     pub complete: bool,
+    pub timeout: bool,
 }
 
 pub fn diagnosis<T>(g: &graph::Graph<T>, conf: &EngineConfig) -> DiagnosisResult
@@ -28,10 +29,23 @@ fn real_diagnosis<T>(g: &graph::Graph<T>, conf: &EngineConfig) -> DiagnosisResul
 where
     T: AsLabel,
 {
-    let regex = build_regex(g);
-    DiagnosisResult {
-        matrix: regex,
-        complete: true,
+    let regex = build_regex(g, conf);
+
+    match regex {
+        BuildResult::Regex(regex) => {
+            DiagnosisResult {
+                matrix: regex,
+                complete: true,
+                timeout: false
+            }
+        },
+        BuildResult::Timeout => {
+            DiagnosisResult {
+                matrix: None,
+                complete: false,
+                timeout: true
+            }
+        }
     }
 }
 
@@ -39,6 +53,7 @@ fn empty_diagnosis() -> DiagnosisResult {
     DiagnosisResult {
         matrix: Some(Regex::default()),
         complete: true,
+        timeout: false
     }
 }
 
@@ -46,6 +61,7 @@ pub fn fail_diagnosis() -> DiagnosisResult {
     DiagnosisResult {
         matrix: None,
         complete: true,
+        timeout: false
     }
 }
 
@@ -86,9 +102,11 @@ fn lbl_to_regex<T: AsLabel>(t: &T) -> Regex {
     Regex::Value(vect)
 }
 
-fn build_regex<T: AsLabel>(g: &graph::Graph<T>) -> Option<Regex> {
+fn build_regex<T: AsLabel>(g: &graph::Graph<T>, conf: &EngineConfig) -> BuildResult {
     let mut g = g.convert(lbl_to_regex).add_fake_nodes();
-    while g.trans_count() > 1 {
+    let timer = conf.timer_factory.new_timer();
+    let mut timeout = false;
+    while continue_process(&g, &mut timeout, &timer) {
         let node_count = g.get_node_kind_list().len();
         let trans_count = build_in_out_count(g.get_adjacent_list(), node_count);
         if let Some(chain) = find_chain(g.get_adjacent_list(), &trans_count) {
@@ -99,8 +117,27 @@ fn build_regex<T: AsLabel>(g: &graph::Graph<T>) -> Option<Regex> {
             g = process_best_node(g, &trans_count);
         }
     }
-    let output = g.remove_arc(0, 1).pop().unwrap().label;
-    output.fix_empty()
+    if timeout {
+        BuildResult::Timeout
+    } else {
+        let output = g.remove_arc(0, 1).pop().unwrap().label;
+        let regex = output.fix_empty();
+        BuildResult::Regex(regex)
+    }
+}
+
+enum BuildResult {
+    Timeout,
+    Regex(Option<Regex>)
+}
+
+fn continue_process<T>(g: &graph::Graph<T>, timeout: &mut bool, timer: &Timer) -> bool {
+    if timer.timeout() {
+        *timeout = true;
+        false
+    } else {
+        g.trans_count() > 1
+    }
 }
 
 fn process_best_node(mut g: graph::Graph<Regex>, count: &[TransCount]) -> graph::Graph<Regex> {
