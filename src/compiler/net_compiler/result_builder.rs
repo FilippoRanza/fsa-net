@@ -3,16 +3,16 @@ use crate::network;
 
 use super::super::CompileNetwork;
 
-use std::collections::HashMap;
+use ahash::AHashMap;
 
 pub struct ResultBuilder<'a> {
-    results: HashMap<&'a str, CompileStorage>,
+    results: AHashMap<&'a str, CompileStorage>,
 }
 
 impl<'a> ResultBuilder<'a> {
     pub fn new() -> Self {
         Self {
-            results: HashMap::new(),
+            results: AHashMap::new(),
         }
     }
 

@@ -9,7 +9,7 @@
         names of the correct type
 */
 
-use std::collections::HashMap;
+use ahash::AHashMap;
 
 use super::name_error::*;
 use crate::new_name_error;
@@ -28,8 +28,8 @@ use super::Loc;
  */
 #[derive(Debug)]
 pub struct GlobalNameTable<'a> {
-    networks: HashMap<&'a str, NetworkNameTable<'a>>,
-    requests: HashMap<&'a str, RequestTable<'a>>,
+    networks: AHashMap<&'a str, NetworkNameTable<'a>>,
+    requests: AHashMap<&'a str, RequestTable<'a>>,
 
     status: CollectionStatus<'a>,
     net_index: usize,
@@ -53,8 +53,8 @@ pub struct GlobalNameTable<'a> {
 impl<'a> GlobalNameTable<'a> {
     pub fn new() -> Self {
         Self {
-            networks: HashMap::new(),
-            requests: HashMap::new(),
+            networks: AHashMap::new(),
+            requests: AHashMap::new(),
             status: CollectionStatus::Global,
             net_index: 0,
         }
@@ -548,8 +548,8 @@ struct NetworkNameTable<'a> {
     loc: Loc,
     stat: NameStatus,
     counter: ClassIndex<NetworkName>,
-    names: HashMap<&'a str, NetworkNameInfo>,
-    automata: HashMap<&'a str, AutomataNameTable<'a>>,
+    names: AHashMap<&'a str, NetworkNameInfo>,
+    automata: AHashMap<&'a str, AutomataNameTable<'a>>,
     index: usize,
 }
 
@@ -559,8 +559,8 @@ impl<'a> NetworkNameTable<'a> {
             loc,
             stat,
             counter: ClassIndex::new(),
-            names: HashMap::new(),
-            automata: HashMap::new(),
+            names: AHashMap::new(),
+            automata: AHashMap::new(),
             index,
         }
     }
@@ -766,7 +766,7 @@ enum NetworkName {
 
 #[derive(Debug)]
 struct AutomataNameTable<'a> {
-    names: HashMap<&'a str, AutomataInfo>,
+    names: AHashMap<&'a str, AutomataInfo>,
     loc: Loc,
     index: usize,
     counter: ClassIndex<AutomataName>,
@@ -776,7 +776,7 @@ struct AutomataNameTable<'a> {
 impl<'a> AutomataNameTable<'a> {
     fn new(name: &'a str, loc: Loc, index: usize) -> Self {
         AutomataNameTable {
-            names: HashMap::new(),
+            names: AHashMap::new(),
             loc,
             index,
             counter: ClassIndex::new(),

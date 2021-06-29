@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use ahash::AHashMap;
 
 #[derive(Debug)]
 pub struct ClassIndex<T> {
-    counter: HashMap<T, usize>,
+    counter: AHashMap<T, usize>,
 }
 
 impl<T> ClassIndex<T>
@@ -11,7 +11,7 @@ where
 {
     pub fn new() -> Self {
         Self {
-            counter: HashMap::new(),
+            counter: AHashMap::new(),
         }
     }
 

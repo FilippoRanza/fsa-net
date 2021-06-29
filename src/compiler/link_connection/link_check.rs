@@ -1,7 +1,7 @@
 use super::super::compiler_utils::is_network;
 use fsa_net_parser::syntax_tree::*;
 use fsa_net_parser::Code;
-use std::collections::HashMap;
+use ahash::AHashMap;
 
 pub fn link_check<'a>(code: &'a Code<'a>) -> Result<(), LinkError<'a>> {
     code.iter()
@@ -78,7 +78,7 @@ fn validate_link<'a>(factory: CheckLinkFactory<'a>) -> Result<(), LinkError<'a>>
 
 #[derive(Default)]
 struct CheckLinkFactory<'a> {
-    links_def: HashMap<&'a str, LinkInfo<'a>>,
+    links_def: AHashMap<&'a str, LinkInfo<'a>>,
     links_use: Vec<LinkUsage<'a>>,
 }
 
@@ -183,7 +183,7 @@ impl<'a> LinkInfo<'a> {
 
 #[derive(Default)]
 struct LinkUsageCounter<'a> {
-    counter: HashMap<LinkUsageKey<'a>, usize>,
+    counter: AHashMap<LinkUsageKey<'a>, usize>,
 }
 
 impl<'a> LinkUsageCounter<'a> {

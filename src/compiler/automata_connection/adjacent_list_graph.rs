@@ -1,10 +1,11 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
+use ahash::AHashMap;
 
 #[derive(Default)]
 pub struct GraphBuilder<'a> {
     nodes: Vec<Node<'a>>,
     edges: Vec<(&'a str, &'a str)>,
-    node_indexs: HashMap<&'a str, usize>,
+    node_indexs: AHashMap<&'a str, usize>,
     begin: &'a str,
 }
 
