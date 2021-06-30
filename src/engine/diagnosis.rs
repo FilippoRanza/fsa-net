@@ -234,7 +234,7 @@ struct TransCount {
 }
 
 fn find_chain<T>(g: &graph::AdjList<T>, count: &[TransCount]) -> Option<Vec<usize>> {
-    let candidate = count
+    let candidate: HashSet<usize> = count
         .iter()
         .enumerate()
         .filter_map(|(i, tc)| {
@@ -246,7 +246,12 @@ fn find_chain<T>(g: &graph::AdjList<T>, count: &[TransCount]) -> Option<Vec<usiz
         })
         .collect();
 
+    if candidate.is_empty() {
+        return None;
+    }
+
     let out = (0..g.len())
+        .filter(|i| !candidate.contains(i))
         .map(|i| try_path(i, g, &candidate))
         .filter_map(|o| o)
         .max_by_key(|v| v.len());
