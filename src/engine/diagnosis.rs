@@ -162,7 +162,7 @@ fn process_best_node(mut g: graph::Graph<Regex>, count: &[TransCount]) -> graph:
             vec![v1, v2]
         };
         let regex = Regex::Chain(regex);
-        //dbg!(&regex);
+        let regex = quick_fix(regex);
         g = g.add_arc(src, dst, regex);
     }
 
@@ -320,18 +320,26 @@ fn find_parallel<T>(g: &graph::AdjList<T>) -> Option<Vec<(usize, usize)>> {
     }
 }
 
+fn quick_fix(r: Regex) -> Regex {
+    if let Some(r) = r.fix_empty() {
+        r
+    } else {
+        Regex::Value(vec![])
+    }
+}
+
 fn alt_regex<I>(reg_iter: I) -> Regex
 where
     I: IntoIterator<Item = graph::Arc<Regex>>,
 {
-    Regex::Alternative(vectorize_regex(reg_iter))
+    quick_fix(Regex::Alternative(vectorize_regex(reg_iter)))
 }
 
 fn chain_regex<I>(reg_iter: I) -> Regex
 where
     I: IntoIterator<Item = graph::Arc<Regex>>,
 {
-    Regex::Chain(vectorize_regex(reg_iter))
+    quick_fix(Regex::Chain(vectorize_regex(reg_iter)))
 }
 
 fn vectorize_regex<I>(reg_iter: I) -> Vec<Regex>
