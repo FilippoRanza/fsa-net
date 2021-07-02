@@ -2,6 +2,18 @@ use std::fs;
 use std::io;
 use std::path;
 
+pub fn write_results<P>(res: String, file: Option<P>) -> io::Result<()>
+where
+    P: AsRef<path::Path>,
+{
+    if let Some(file) = file {
+        let file = fs::File::create(file)?;
+        dump_code(res, file)
+    } else {
+        dump_code(res, io::stdout())
+    }
+}
+
 pub fn get_fsa_code(file_path: &Option<path::PathBuf>) -> io::Result<String> {
     if let Some(file_path) = file_path {
         let file = fs::File::open(file_path)?;

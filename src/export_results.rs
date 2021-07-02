@@ -22,33 +22,22 @@ impl JsonFormat {
     }
 }
 
-pub fn export_results(
-    results: Vec<NRes>,
-    index_table: &NetworkIndexTable,
-    fmt: &JsonFormat,
-) -> String {
+pub fn export_results<'a>(
+    results: &'a Vec<NRes>,
+    index_table: &'a NetworkIndexTable<'a>,
+) -> FullResult<'a> {
     let exports = results
         .iter()
         .map(|results| export_result(results, index_table))
         .collect();
     let name = index_table.get_name();
-    FullResult { name, exports }.to_json(fmt)
+    FullResult { name, exports }
 }
 
 #[derive(Serialize)]
 pub struct FullResult<'a> {
     name: &'a str,
     exports: Vec<ExportResult<'a>>,
-}
-
-impl<'a> FullResult<'a> {
-    fn to_json(&self, fmt: &JsonFormat) -> String {
-        let f = match fmt {
-            JsonFormat::Compact => serde_json::to_string,
-            JsonFormat::Pretty => serde_json::to_string_pretty,
-        };
-        f(self).unwrap()
-    }
 }
 
 fn export_result<'a>(result: &'a NRes, table: &'a NetworkIndexTable<'a>) -> ExportResult<'a> {

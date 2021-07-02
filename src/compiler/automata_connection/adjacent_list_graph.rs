@@ -1,5 +1,5 @@
-use std::collections::VecDeque;
 use ahash::AHashMap;
+use std::collections::VecDeque;
 
 #[derive(Default)]
 pub struct GraphBuilder<'a> {

@@ -1,7 +1,7 @@
 use super::super::compiler_utils::is_network;
+use ahash::AHashMap;
 use fsa_net_parser::syntax_tree::*;
 use fsa_net_parser::Code;
-use ahash::AHashMap;
 
 pub fn link_check<'a>(code: &'a Code<'a>) -> Result<(), LinkError<'a>> {
     code.iter()
